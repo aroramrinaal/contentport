@@ -9,7 +9,7 @@ export const authClient = createAuthClient({
   plugins: [
     inferAdditionalFields({
       user: {
-        plan: { type: 'string', defaultValue: 'free' },
+        plan: { type: 'string', defaultValue: 'pro' },
       },
     }),
   ],

@@ -6,7 +6,7 @@ import { redis } from '@/lib/redis'
 import { BUCKET_NAME, s3Client } from '@/lib/s3'
 import { HeadObjectCommand } from '@aws-sdk/client-s3'
 import { Receiver } from '@upstash/qstash'
-import { Ratelimit } from '@upstash/ratelimit'
+// import { Ratelimit } from '@upstash/ratelimit' // No longer needed - unlimited access for all
 import { and, desc, eq } from 'drizzle-orm'
 import { HTTPException } from 'hono/http-exception'
 import { SendTweetV2Params, TwitterApi, UserV2 } from 'twitter-api-v2'

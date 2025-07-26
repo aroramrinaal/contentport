@@ -20,7 +20,6 @@ import { j, privateProcedure } from '../../jstack'
 import { create_edit_tweet } from './edit-tweet'
 import { create_read_website_content } from './read-website-content'
 import { parseAttachments, PromptBuilder } from './utils'
-import { Ratelimit } from '@upstash/ratelimit'
 import { HTTPException } from 'hono/http-exception'
 import { create_three_drafts } from './create-three-drafts'
 
@@ -147,18 +146,7 @@ export const chatRouter = j.router({
     .post(async ({ input, ctx }) => {
       const { user } = ctx
 
-      // Rate limiting - only apply to free users (none exist since everyone is pro by default)
-      if (user.plan !== 'pro' && process.env.NODE_ENV === 'production') {
-        const limiter = new Ratelimit({ redis, limiter: Ratelimit.fixedWindow(5, '1d') })
-        const { success } = await limiter.limit(user.email)
-        
-        if (!success) {
-          throw new HTTPException(429, {
-            message: 'Daily chat limit reached.',
-          })
-        }
-      }
-      // Pro users (everyone) have unlimited access - no rate limiting
+      // Everyone has unlimited access - no rate limiting needed
 
       const chatId = input.message.chatId
       const attachments = input.message.metadata?.attachments
