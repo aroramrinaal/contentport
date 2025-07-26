@@ -14,7 +14,8 @@ export const auth = betterAuth({
   trustedOrigins: [
     'http://localhost:3000',
     'https://contentport.io',
-    'https://www.contentport.io',
+    'https://contentport-mrinaal.vercel.app',
+    'https://www.contentport.io'
   ],
   // databaseHooks: {
   //   user: {

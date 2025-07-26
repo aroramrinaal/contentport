@@ -19,6 +19,7 @@ const api = j
         'https://www.contentport.io',
         'https://contentport.vercel.app',
         'https://www.contentport.vercel.app',
+        'https://contentport-mrinaal.vercel.app'
       ],
       allowHeaders: ['x-is-superjson', 'Content-Type', 'content-type'],
       exposeHeaders: ['x-is-superjson', 'Content-Type', 'content-type'],
