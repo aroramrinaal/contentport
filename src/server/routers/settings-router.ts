@@ -1,6 +1,6 @@
 import { db } from '@/db'
 import { account as accountSchema } from '@/db/schema'
-import { chatLimiter } from '@/lib/chat-limiter'
+// import { chatLimiter } from '@/lib/chat-limiter' // Not needed since everyone is pro
 import { redis } from '@/lib/redis'
 import { xai } from '@ai-sdk/xai'
 import { generateText } from 'ai'
@@ -148,9 +148,11 @@ EXAMPLE:
 export const settingsRouter = j.router({
   limit: privateProcedure.get(async ({ c, ctx }) => {
     const { user } = ctx
-    const { remaining, reset } = await chatLimiter.getRemaining(user.email)
-
-    return c.json({ remaining, reset })
+    // Everyone is pro by default - return unlimited usage
+    return c.json({ 
+      remaining: 999999, // Unlimited 
+      reset: Date.now() + 24 * 60 * 60 * 1000 // Reset 24h from now (not that it matters)
+    })
   }),
 
   // onboarding: privateProcedure

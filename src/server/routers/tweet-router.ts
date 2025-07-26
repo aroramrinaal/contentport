@@ -464,21 +464,7 @@ export const tweetRouter = j.router({
         })
       }
 
-      if (user.plan !== 'pro') {
-        const limiter = new Ratelimit({
-          redis,
-          limiter: Ratelimit.slidingWindow(1, '7d'),
-        })
-
-        const { success } = await limiter.limit(user.email)
-
-        if (!success) {
-          throw new HTTPException(402, {
-            message:
-              'Free plan scheduling limit reached. Upgrade to Pro to schedule unlimited tweets.',
-          })
-        }
-      }
+      // Everyone is pro by default - no tweet posting limits
 
       const tweetId = crypto.randomUUID()
 
