@@ -4,7 +4,7 @@ import { account as accountSchema, tweets } from '@/db/schema'
 import { qstash } from '@/lib/qstash'
 import { redis } from '@/lib/redis'
 import { BUCKET_NAME, s3Client } from '@/lib/s3'
-import { HeadObjectCommand } from '@aws-sdk/client-s3'
+import { HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { Receiver } from '@upstash/qstash'
 // import { Ratelimit } from '@upstash/ratelimit' // No longer needed - unlimited access for all
 import { and, desc, eq } from 'drizzle-orm'
@@ -247,14 +247,31 @@ export const tweetRouter = j.router({
         accessSecret: account.accessSecret as string,
       })
 
-      const mediaUrl = `https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME}.s3.amazonaws.com/${s3Key}`
-      const response = await fetch(mediaUrl)
-
-      if (!response.ok) {
+      console.log('🔍 Fetching media from S3 using SDK')
+      
+      let buffer: ArrayBuffer
+      let contentType: string
+      
+      try {
+        const getObjectCommand = new GetObjectCommand({
+          Bucket: process.env.NEXT_PUBLIC_S3_BUCKET_NAME,
+          Key: s3Key,
+        })
+        
+        const s3Response = await s3Client.send(getObjectCommand)
+        
+        if (!s3Response.Body) {
+          throw new Error('No file body received from S3')
+        }
+        
+        const uint8Array = await s3Response.Body.transformToByteArray()
+        buffer = uint8Array.buffer as ArrayBuffer
+        contentType = s3Response.ContentType || ''
+        console.log('✅ Successfully fetched media from S3 using SDK')
+      } catch (error) {
+        console.error('❌ Failed to fetch media from S3:', error)
         throw new HTTPException(400, { message: 'Failed to fetch media from S3' })
       }
-
-      const buffer = await response.arrayBuffer()
 
       // Determine media category and type for Twitter
       let mediaCategory: string
@@ -263,7 +280,7 @@ export const tweetRouter = j.router({
       switch (mediaType) {
         case 'image':
           mediaCategory = 'tweet_image'
-          mimeType = response.headers.get('content-type') || 'image/png'
+          mimeType = contentType || 'image/png'
           break
         case 'gif':
           mediaCategory = 'tweet_gif'
@@ -271,7 +288,7 @@ export const tweetRouter = j.router({
           break
         case 'video':
           mediaCategory = 'tweet_video'
-          mimeType = response.headers.get('content-type') || 'video/mp4'
+          mimeType = contentType || 'video/mp4'
           break
       }
 
