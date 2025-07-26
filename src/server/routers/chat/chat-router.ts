@@ -147,10 +147,18 @@ export const chatRouter = j.router({
     .post(async ({ input, ctx }) => {
       const { user } = ctx
 
-      const limiter =
-        user.plan === 'pro'
-          ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(40, '4h') })
-          : new Ratelimit({ redis, limiter: Ratelimit.fixedWindow(5, '1d') })
+      // Rate limiting - only apply to free users (none exist since everyone is pro by default)
+      if (user.plan !== 'pro' && process.env.NODE_ENV === 'production') {
+        const limiter = new Ratelimit({ redis, limiter: Ratelimit.fixedWindow(5, '1d') })
+        const { success } = await limiter.limit(user.email)
+        
+        if (!success) {
+          throw new HTTPException(429, {
+            message: 'Daily chat limit reached.',
+          })
+        }
+      }
+      // Pro users (everyone) have unlimited access - no rate limiting
 
       const chatId = input.message.chatId
       const attachments = input.message.metadata?.attachments
@@ -160,22 +168,6 @@ export const chatRouter = j.router({
 
       if (!account) {
         throw new HTTPException(412, { message: 'No connected account' })
-      }
-
-      if (process.env.NODE_ENV === 'production') {
-        const { success } = await limiter.limit(user.email)
-
-        if (!success) {
-          if (user.plan === 'pro') {
-            throw new HTTPException(429, {
-              message: "You've reached a rate limit, please try again soon.",
-            })
-          } else {
-            throw new HTTPException(429, {
-              message: 'Daily chat limit reached.',
-            })
-          }
-        }
       }
 
       const existingChat = await redis.json.get<{ messages: TestUIMessage[] }>(

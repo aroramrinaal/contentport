@@ -3,7 +3,8 @@ export interface StripeSubscriptionData {
   priceId?: string | null;
 }
 
+// Dummy Stripe IDs since everyone is pro by default - Stripe not used
 export const STRIPE_SUBSCRIPTION_DATA: StripeSubscriptionData = {
-  "id": "prod_Sdai9fYhooL16t",
-  "priceId": "price_1RiJX1A19umTXGu8k9V4fMkn"
+  "id": "prod_dummy_not_used",
+  "priceId": "price_dummy_not_used"
 };

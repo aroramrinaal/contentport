@@ -281,11 +281,9 @@ export const LeftSidebar = () => {
                     {data.user.name ?? 'Account'}
                   </span>
 
-                  {data.user.plan && (
-                    <span className="truncate text-xs text-muted-foreground">
-                      {data.user.plan === 'free' ? 'Free' : '🐐 Pro'}
-                    </span>
-                  )}
+                  <span className="truncate text-xs text-muted-foreground">
+                    🐐 Pro
+                  </span>
                 </div>
               </Link>
             ) : null}

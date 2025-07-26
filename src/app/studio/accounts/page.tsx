@@ -285,34 +285,14 @@ export default function AccountsPage() {
             </p>
           </div>
 
-          {data?.user.plan === 'free' ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DuolingoButton
-                  size="sm"
-                  onClick={() => {
-                    toast('🔒 Please upgrade to Pro to add unlimited accounts')
-                  }}
-                  className="w-auto relative z-20 transition-all duration-200"
-                >
-                  <Lock className="size-4 mr-2" />
-                  <span className="whitespace-nowrap">Add Account</span>
-                  <ChevronDown className="size-4 ml-2" />
-                </DuolingoButton>
-              </TooltipTrigger>
-              <TooltipContent className="bg-gray-900 text-white border-gray-700">
-                <p className="font-medium">Upgrade to Pro to add unlimited accounts</p>
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <DuolingoButton size="sm" className="w-auto relative z-20">
-                  <Plus className="size-4 mr-2" />
-                  <span className="whitespace-nowrap">Add Account</span>
-                  <ChevronDown className="size-4 ml-2" />
-                </DuolingoButton>
-              </DropdownMenuTrigger>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <DuolingoButton size="sm" className="w-auto relative z-20">
+                <Plus className="size-4 mr-2" />
+                <span className="whitespace-nowrap">Add Account</span>
+                <ChevronDown className="size-4 ml-2" />
+              </DuolingoButton>
+            </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="p-3 border-2 shadow-xl">
                 <div className="space-y-2">
                   <DropdownMenuItem asChild>
@@ -356,7 +336,6 @@ export default function AccountsPage() {
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
         </div>
 
         {isLoadingAccounts ? (
