@@ -12,11 +12,11 @@ import { z } from 'zod'
 import { Account } from './settings-router'
 import { getBaseUrl } from '@/constants/base-url'
 
-import { PostHog } from 'posthog-node'
+// import { PostHog } from 'posthog-node'
 
-const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-  host: 'https://eu.i.posthog.com',
-})
+// const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+//   host: 'https://eu.i.posthog.com',
+// })
 
 const nanoid = customAlphabet(
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
@@ -334,18 +334,18 @@ export const authRouter = j.router({
       ])
     }
 
-    posthog.capture({
-      distinctId: user.id,
-      event: 'user_account_connected',
-      properties: {
-        userId: user.id,
-        accountId: dbAccountId,
-        accountName: userProfile.name,
-        reason: authAction,
-      },
-    })
+    // posthog.capture({
+    //   distinctId: user.id,
+    //   event: 'user_account_connected',
+    //   properties: {
+    //     userId: user.id,
+    //     accountId: dbAccountId,
+    //     accountName: userProfile.name,
+    //     reason: authAction,
+    //   },
+    // })
 
-    await posthog.shutdown()
+    // await posthog.shutdown()
 
     if (authAction === 'invite') {
       return c.redirect(`${getBaseUrl()}/invite/success?id=${inviteId}`)
