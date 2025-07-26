@@ -33,6 +33,7 @@ export const FILE_TYPE_MAP = {
   'text/plain': 'txt',
   'image/jpeg': 'image',
   'image/png': 'image',
+  'image/gif': 'image',
   'image/webp': 'image',
   'image/svg+xml': 'image',
 } as const

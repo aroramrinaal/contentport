@@ -78,47 +78,59 @@ export const parseAttachments = async ({
         }
       }
 
-      const command = new HeadObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: attachment.fileKey,
-      })
-
-      const data = await s3Client.send(command)
-      const contentType = data.ContentType as keyof typeof FILE_TYPE_MAP
-
-      const type = FILE_TYPE_MAP[contentType as keyof typeof FILE_TYPE_MAP]
-      const url = `https://${BUCKET_NAME}.s3.amazonaws.com/${attachment.fileKey}`
-
-      if (type === 'image') {
-        return { type: 'image' as const, image: url } as ImagePart
-      } else if (type === 'docx') {
-        const response = await fetch(url)
-        const buffer = await response.arrayBuffer()
-        const { value } = await mammoth.extractRawText({
-          buffer: Buffer.from(buffer),
+      try {
+        const command = new HeadObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: attachment.fileKey,
         })
-        return {
-          type: 'text' as const,
-          text: `<attached_docx>${value}</attached_docx>`,
-        } as TextPart
-      } else if (attachment.type === 'video') {
-        // Handle video transcript
-        const transcript = await fetchVideoTranscript(attachment.fileKey!)
 
-        if (transcript) {
-          return {
-            type: 'text' as const,
-            text: `<video_transcript>${transcript}</video_transcript>`,
-          } as TextPart
-        } else {
-          // If transcript is not ready, return a placeholder
-          return {
-            type: 'text' as const,
-            text: `<video_transcript>Video transcript is being processed and is not yet available. Please try again in a few moments.</video_transcript>`,
-          } as TextPart
+        const data = await s3Client.send(command)
+        const contentType = data.ContentType as keyof typeof FILE_TYPE_MAP
+
+        const type = FILE_TYPE_MAP[contentType as keyof typeof FILE_TYPE_MAP]
+        const url = `https://${BUCKET_NAME}.s3.amazonaws.com/${attachment.fileKey}`
+
+        if (!type) {
+          console.warn(`Unknown content type: ${contentType} for file: ${attachment.fileKey}`)
+          return { type: 'file' as const, data: url, mimeType: contentType } as FilePart
         }
-      } else {
-        return { type: 'file' as const, data: url, mimeType: contentType } as FilePart
+
+        if (type === 'image') {
+          return { type: 'image' as const, image: url } as ImagePart
+        } else if (type === 'docx') {
+          const response = await fetch(url)
+          const buffer = await response.arrayBuffer()
+          const { value } = await mammoth.extractRawText({
+            buffer: Buffer.from(buffer),
+          })
+          return {
+            type: 'text' as const,
+            text: `<attached_docx>${value}</attached_docx>`,
+          } as TextPart
+        } else if (attachment.type === 'video') {
+          // Handle video transcript
+          const transcript = await fetchVideoTranscript(attachment.fileKey!)
+
+          if (transcript) {
+            return {
+              type: 'text' as const,
+              text: `<video_transcript>${transcript}</video_transcript>`,
+            } as TextPart
+          } else {
+            // If transcript is not ready, return a placeholder
+            return {
+              type: 'text' as const,
+              text: `<video_transcript>Video transcript is being processed and is not yet available. Please try again in a few moments.</video_transcript>`,
+            } as TextPart
+          }
+        } else {
+          return { type: 'file' as const, data: url, mimeType: contentType } as FilePart
+        }
+      } catch (error) {
+        console.error(`Error processing attachment ${attachment.fileKey}:`, error)
+        // Return a fallback file part if S3 operations fail
+        const url = `https://${BUCKET_NAME}.s3.amazonaws.com/${attachment.fileKey}`
+        return { type: 'file' as const, data: url, mimeType: 'application/octet-stream' } as FilePart
       }
     })
   )
