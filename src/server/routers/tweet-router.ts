@@ -50,7 +50,6 @@ async function fetchMediaFromS3(media: { s3Key: string; media_id: string }[]) {
           }),
         )
 
-        const url = `https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME}.s3.amazonaws.com/${m.s3Key}`
         const contentType = headResponse.ContentType || ''
 
         // Determine media type from content-type or file extension
@@ -70,6 +69,22 @@ async function fetchMediaFromS3(media: { s3Key: string; media_id: string }[]) {
         } else if (contentType.startsWith('image/')) {
           type = 'image'
         }
+
+        // Fetch the actual file data using S3 SDK instead of public URL
+        const getObjectCommand = new GetObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: m.s3Key,
+        })
+        
+        const s3Response = await s3Client.send(getObjectCommand)
+        
+        if (!s3Response.Body) {
+          throw new Error('No file body received from S3')
+        }
+        
+        const uint8Array = await s3Response.Body.transformToByteArray()
+        const blob = new Blob([uint8Array], { type: contentType })
+        const url = URL.createObjectURL(blob)
 
         return {
           url,
