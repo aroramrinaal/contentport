@@ -205,7 +205,10 @@ ${promptPart}` : promptPart)
   return {
     id: `style:${nanoid()}`,
     role: 'user' as const,
-    content: `${editToolSystemPrompt}
+    content: [
+      {
+        type: 'text',
+        text: `${editToolSystemPrompt}
     
 Now, I am setting guidelines for our entire following conversation. It's important that you listen to this message closely.
 
@@ -287,6 +290,8 @@ Use the following tweets as a direct style reference for the tweet you are writi
 ${styleContext}
 </example_tweets>
 </desired_tweet_style>`,
+      },
+    ],
   }
 }
 
