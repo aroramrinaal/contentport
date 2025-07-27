@@ -168,13 +168,39 @@ export const editToolStyleMessage = ({
   style: Style
   account: { name: string; username: string } | null
   examples?: string
-}): any => {
+}) => {
   const { tweets, prompt } = style
 
   const promptPart = `The following style guide may or may not be relevant for your output:
 "${prompt}"
 
 Follow this instruction closely and create your tweet in the same style.`
+
+  // Separate early and recent tweets for better context
+  const earlyTweets = tweets?.filter((tweet: any) => tweet.isEarly) || []
+  const recentTweets = tweets?.filter((tweet: any) => !tweet.isEarly) || []
+  const allTweets = tweets || []
+
+  const tweetExamples = allTweets
+    .slice(0, 8) // Show top 8 tweets
+    .map((tweet: any, index: number) => {
+      const tweetType = tweet.isEarly ? " (Early Tweet - Foundational Style)" : " (Recent Tweet)"
+      return `${index + 1}. ${tweet.text}${tweetType}`
+    })
+    .join('\n\n')
+
+  const styleContext = examples || (allTweets.length > 0 ? `
+Based on ${allTweets.length} tweets (${recentTweets.length} recent, ${earlyTweets.length} early):
+
+CORE STYLE ELEMENTS:
+- This analysis combines foundational style from early tweets with current voice from recent tweets
+- Focus on consistent patterns that appear across both time periods for authentic voice
+- Early tweets show foundational style, recent tweets show current evolution
+
+REFERENCE TWEETS:
+${tweetExamples}
+
+${promptPart}` : promptPart)
 
   return {
     id: `style:${nanoid()}`,
@@ -258,18 +284,8 @@ For your information: In our chat, I may or may not reference documents using th
 Use the following tweets as a direct style reference for the tweet you are writing. I provided them because the I like their style. Your output should belong exactly in that same line-up style-wise. 
 
 <example_tweets>
-${tweets?.map((tweet) => `<tweet>${tweet.text}</tweet>`)}
+${styleContext}
 </example_tweets>
-
-${prompt ? promptPart : ''}
-
-${
-  examples
-    ? `Follow these examples for style reference:
-  
-${examples}`
-    : ''
-}
 </desired_tweet_style>`,
   }
 }

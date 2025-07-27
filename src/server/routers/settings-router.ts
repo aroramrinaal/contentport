@@ -148,6 +148,112 @@ EXAMPLE:
   }
 }
 
+async function analyzeUserStyleWithHistory(
+  allTweets: any[], 
+  recentTweets: any[], 
+  earlyTweets: any[]
+): Promise<StyleAnalysis> {
+  const systemPrompt = `You are an expert at analyzing writing styles from social media posts. You will analyze tweets from different time periods to understand the user's core writing style and how it has evolved.
+
+You have access to:
+1. EARLY TWEETS: The user's foundational tweets from when they started
+2. RECENT TWEETS: Their current writing style
+3. ALL TWEETS: Combined dataset
+
+Focus on:
+- Core style elements that remain consistent over time
+- Writing patterns that define their authentic voice
+- Tone, vocabulary, structure preferences
+- Engagement techniques they consistently use
+
+Write your analysis as "write like..." instructions that capture their AUTHENTIC CORE STYLE, not just recent trends.
+
+Keep it practical and actionable. Focus on patterns that appear in both early and recent tweets for authenticity.
+
+EXAMPLE FORMAT:
+- write in lowercase with selective capitalization for emphasis
+- use short, punchy sentences that get straight to the point
+- employ bullet points with ◆ symbols to break down complex ideas
+- include personal anecdotes and experiences to build connection
+- use rhetorical questions to engage readers directly
+- maintain an enthusiastic but authentic tone throughout
+- mix technical insights with casual, relatable language
+
+The goal is to help an AI replicate their most authentic writing style by understanding their core voice.`
+
+  const formatTweetAnalysis = (tweets: any[], label: string) => {
+    return `${label}:\n` + tweets.map((tweet, index) => `${index + 1}. ${tweet.text}`).join('\n\n')
+  }
+
+  // Analyze all tweets together for overall style
+  const allTweetsText = formatTweetAnalysis(allTweets, "ALL TWEETS (Combined Dataset)")
+  
+  // Analyze recent tweets for current style
+  const recentTweetsText = recentTweets.length > 0 
+    ? formatTweetAnalysis(recentTweets, "RECENT TWEETS (Current Style)")
+    : "No recent tweets available"
+  
+  // Analyze early tweets for foundational style
+  const earlyTweetsText = earlyTweets.length > 0 
+    ? formatTweetAnalysis(earlyTweets, "EARLY TWEETS (Foundational Style)")
+    : "No early tweets available"
+
+  const [overallAnalysis, recentAnalysis, earlyAnalysis, evolutionAnalysis] =
+    await Promise.all([
+      // Overall style from all tweets
+      generateText({
+        model: xai('grok-3-latest'),
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: `Analyze the overall core writing style:\n\n${allTweetsText}`,
+          },
+        ],
+      }),
+      // Recent style analysis
+      generateText({
+        model: xai('grok-3-latest'),
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: `Analyze the recent writing style:\n\n${recentTweetsText}`,
+          },
+        ],
+      }),
+      // Early style analysis
+      generateText({
+        model: xai('grok-3-latest'),
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: `Analyze the foundational writing style:\n\n${earlyTweetsText}`,
+          },
+        ],
+      }),
+      // Style evolution analysis
+      generateText({
+        model: xai('grok-3-latest'),
+        system: `${systemPrompt}\n\nSpecial focus: Compare early vs recent tweets to identify the CORE CONSISTENT elements that define this person's authentic voice across time.`,
+        messages: [
+          {
+            role: 'user',
+            content: `Compare and identify core consistent style elements:\n\n${earlyTweetsText}\n\n---\n\n${recentTweetsText}`,
+          },
+        ],
+      }),
+    ])
+
+  return {
+    overall: overallAnalysis.text,
+    first_third: recentAnalysis.text, // Recent tweets as primary style
+    second_third: earlyAnalysis.text, // Early tweets as foundational style
+    third_third: evolutionAnalysis.text, // Style evolution and core elements
+  }
+}
+
 export const settingsRouter = j.router({
   limit: privateProcedure.get(async ({ c, ctx }) => {
     const { user } = ctx
@@ -521,8 +627,8 @@ export const settingsRouter = j.router({
           'user.fields': ['verified', 'verified_type'],
         })
 
-        // Fetch fresh tweets with new system
-        const userTweets = await client.v2.userTimeline(userProfile.id_str, {
+        // Fetch fresh tweets with new system - RECENT tweets
+        const recentTweets = await client.v2.userTimeline(userProfile.id_str, {
           max_results: 50, // Using the new limit
           'tweet.fields': [
             'public_metrics',
@@ -539,23 +645,59 @@ export const settingsRouter = j.router({
           expansions: ['author_id'],
         })
 
+        // Fetch user's EARLIEST tweets for foundational style reference
+        const earlyTweets = await client.v2.userTimeline(userProfile.id_str, {
+          max_results: 24, // First 24 tweets
+          'tweet.fields': [
+            'public_metrics',
+            'created_at',
+            'text',
+            'author_id',
+            'note_tweet',
+            'edit_history_tweet_ids',
+            'in_reply_to_user_id',
+            'referenced_tweets',
+          ],
+          'user.fields': ['username', 'profile_image_url', 'name'],
+          exclude: ['retweets', 'replies'],
+          expansions: ['author_id'],
+          'start_time': '2006-03-21T00:00:00Z', // Twitter's launch date to get earliest tweets
+          'end_time': '2010-01-01T00:00:00Z', // Limit to early Twitter era for foundational style
+        })
+
         const styleKey = `style:${user.email}:${accountId}`
 
-        if (!userTweets.data.data) {
+        if (!recentTweets.data.data && !earlyTweets.data.data) {
           await redis.json.set(styleKey, '$', {
             tweets: DEFAULT_TWEETS,
             prompt: '',
           })
         } else {
-          const filteredTweets = userTweets.data.data?.filter(
+          // Process recent tweets
+          const recentFiltered = recentTweets.data.data?.filter(
             (tweet) =>
               !tweet.in_reply_to_user_id &&
               !tweet.referenced_tweets?.some((ref) => ref.type === 'replied_to') &&
               tweet.text.length > 20 &&
               tweet.text.length < 280,
+          ) || []
+
+          // Process early tweets
+          const earlyFiltered = earlyTweets.data.data?.filter(
+            (tweet) =>
+              !tweet.in_reply_to_user_id &&
+              !tweet.referenced_tweets?.some((ref) => ref.type === 'replied_to') &&
+              tweet.text.length > 20 &&
+              tweet.text.length < 280,
+          ) || []
+
+          // Combine and deduplicate tweets
+          const allTweets = [...recentFiltered, ...earlyFiltered]
+          const uniqueTweets = allTweets.filter((tweet, index, self) => 
+            index === self.findIndex(t => t.id === tweet.id)
           )
           
-          const tweetsWithStats = filteredTweets.map((tweet) => ({
+          const tweetsWithStats = uniqueTweets.map((tweet) => ({
             id: tweet.id,
             text: tweet.text,
             likes: tweet.public_metrics?.like_count || 0,
@@ -565,10 +707,19 @@ export const settingsRouter = j.router({
             engagement_score: (tweet.public_metrics?.like_count || 0) + 
                             (tweet.public_metrics?.retweet_count || 0) * 2 + 
                             (tweet.public_metrics?.reply_count || 0) * 3,
+            isEarly: earlyFiltered.some(early => early.id === tweet.id), // Mark early tweets
           }))
           
-          const sortedTweets = tweetsWithStats.sort((a, b) => b.engagement_score - a.engagement_score)
-          const topTweets = sortedTweets.slice(0, 30)
+          // Sort by engagement score but prioritize recent tweets
+          const sortedTweets = tweetsWithStats.sort((a, b) => {
+            // If one is early and one is recent, prefer recent for top spots
+            if (a.isEarly && !b.isEarly) return 1
+            if (!a.isEarly && b.isEarly) return -1
+            // Otherwise sort by engagement
+            return b.engagement_score - a.engagement_score
+          })
+          
+          const topTweets = sortedTweets.slice(0, 40) // Increased to accommodate early tweets
           const author = userProfile
           let formattedTweets = topTweets.map((tweet) => {
             const cleanedText = tweet.text.replace(/https:\/\/t\.co\/\w+/g, '').trim()
@@ -579,6 +730,7 @@ export const settingsRouter = j.router({
               author_id: userProfile.id_str,
               edit_history_tweet_ids: [tweet.id],
               engagement_score: tweet.engagement_score,
+              isEarly: tweet.isEarly,
               author: author
                 ? {
                     username: author.screen_name,
@@ -589,12 +741,15 @@ export const settingsRouter = j.router({
             }
           })
           
-          if (formattedTweets.length < 30) {
+          if (formattedTweets.length < 40) {
             const existingIds = new Set(formattedTweets.map((t) => t.id))
             for (const defaultTweet of DEFAULT_TWEETS) {
-              if (formattedTweets.length >= 30) break
+              if (formattedTweets.length >= 40) break
               if (!existingIds.has(defaultTweet.id)) {
-                formattedTweets.push(defaultTweet)
+                formattedTweets.push({
+                  ...defaultTweet,
+                  isEarly: false,
+                })
                 existingIds.add(defaultTweet.id)
               }
             }
@@ -605,16 +760,27 @@ export const settingsRouter = j.router({
             prompt: '',
           })
           
-          // Re-analyze style with new tweets
-          const styleAnalysis = await analyzeUserStyle(formattedTweets)
+          // Re-analyze style with combined tweets (recent + early)
+          const recentTweetsForAnalysis = formattedTweets.filter(t => !t.isEarly)
+          const earlyTweetsForAnalysis = formattedTweets.filter(t => t.isEarly)
+          
+          // Create enhanced style analysis with early vs recent comparison
+          const enhancedStyleAnalysis = await analyzeUserStyleWithHistory(
+            formattedTweets, 
+            recentTweetsForAnalysis, 
+            earlyTweetsForAnalysis
+          )
+          
           const draftStyleKey = `draft-style:${accountId}`
-          await redis.json.set(draftStyleKey, '$', styleAnalysis)
+          await redis.json.set(draftStyleKey, '$', enhancedStyleAnalysis)
         }
 
         return c.json({ 
           success: true, 
-          message: 'Tweets refreshed successfully',
-          tweetCount: userTweets.data.data?.length || 0
+          message: 'Tweets refreshed successfully with early and recent tweets',
+          recentTweetCount: recentTweets.data.data?.length || 0,
+          earlyTweetCount: earlyTweets.data.data?.length || 0,
+          totalProcessed: ((recentTweets.data.data?.length || 0) + (earlyTweets.data.data?.length || 0))
         })
       } catch (error) {
         console.error('Error refreshing tweets:', error)

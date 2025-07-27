@@ -240,24 +240,60 @@ export const authRouter = j.router({
       expansions: ['author_id'],
     })
 
+    // Also fetch user's earliest tweets for foundational style reference
+    const earlyTweets = await loggedInClient.v2.userTimeline(userProfile.id_str, {
+      max_results: 24, // First 24 tweets
+      'tweet.fields': [
+        'public_metrics',
+        'created_at',
+        'text',
+        'author_id',
+        'note_tweet',
+        'edit_history_tweet_ids',
+        'in_reply_to_user_id',
+        'referenced_tweets',
+      ],
+      'user.fields': ['username', 'profile_image_url', 'name'],
+      exclude: ['retweets', 'replies'],
+      expansions: ['author_id'],
+      'start_time': '2006-03-21T00:00:00Z', // Twitter's launch date
+      'end_time': '2010-01-01T00:00:00Z', // Early Twitter era
+    })
+
     // NEW
     const styleKey = `style:${user.email}:${dbAccountId}`
 
-    if (!userTweets.data.data) {
+    if (!userTweets.data.data && !earlyTweets.data.data) {
       await redis.json.set(styleKey, '$', {
         tweets: DEFAULT_TWEETS,
         prompt: '',
       })
     } else {
-      const filteredTweets = userTweets.data.data?.filter(
+      // Process recent tweets
+      const recentFiltered = userTweets.data.data?.filter(
         (tweet) =>
           !tweet.in_reply_to_user_id &&
           !tweet.referenced_tweets?.some((ref) => ref.type === 'replied_to') &&
           tweet.text.length > 20 && // Only tweets with substantial content
           tweet.text.length < 280, // Exclude very long tweets
+      ) || []
+
+      // Process early tweets
+      const earlyFiltered = earlyTweets.data.data?.filter(
+        (tweet) =>
+          !tweet.in_reply_to_user_id &&
+          !tweet.referenced_tweets?.some((ref) => ref.type === 'replied_to') &&
+          tweet.text.length > 20 &&
+          tweet.text.length < 280,
+      ) || []
+
+      // Combine and deduplicate tweets
+      const allTweets = [...recentFiltered, ...earlyFiltered]
+      const uniqueTweets = allTweets.filter((tweet, index, self) => 
+        index === self.findIndex(t => t.id === tweet.id)
       )
       
-      const tweetsWithStats = filteredTweets.map((tweet) => ({
+      const tweetsWithStats = uniqueTweets.map((tweet) => ({
         id: tweet.id,
         text: tweet.text,
         likes: tweet.public_metrics?.like_count || 0,
@@ -267,11 +303,16 @@ export const authRouter = j.router({
         engagement_score: (tweet.public_metrics?.like_count || 0) + 
                         (tweet.public_metrics?.retweet_count || 0) * 2 + 
                         (tweet.public_metrics?.reply_count || 0) * 3,
+        isEarly: earlyFiltered.some(early => early.id === tweet.id),
       }))
       
-      // Sort by engagement score instead of just likes
-      const sortedTweets = tweetsWithStats.sort((a, b) => b.engagement_score - a.engagement_score)
-      const topTweets = sortedTweets.slice(0, 30) // Increased from 20 to 30
+      // Sort by engagement score but prioritize recent tweets
+      const sortedTweets = tweetsWithStats.sort((a, b) => {
+        if (a.isEarly && !b.isEarly) return 1
+        if (!a.isEarly && b.isEarly) return -1
+        return b.engagement_score - a.engagement_score
+      })
+      const topTweets = sortedTweets.slice(0, 40)
       const author = userProfile
       let formattedTweets = topTweets.map((tweet) => {
         const cleanedText = tweet.text.replace(/https:\/\/t\.co\/\w+/g, '').trim()
@@ -282,6 +323,7 @@ export const authRouter = j.router({
           author_id: userProfile.id_str,
           edit_history_tweet_ids: [tweet.id],
           engagement_score: tweet.engagement_score,
+          isEarly: tweet.isEarly,
           author: author
             ? {
                 username: author.screen_name,
@@ -291,13 +333,15 @@ export const authRouter = j.router({
             : null,
         }
       })
-      
-      if (formattedTweets.length < 30) {
+      if (formattedTweets.length < 40) {
         const existingIds = new Set(formattedTweets.map((t) => t.id))
         for (const defaultTweet of DEFAULT_TWEETS) {
-          if (formattedTweets.length >= 30) break
+          if (formattedTweets.length >= 40) break
           if (!existingIds.has(defaultTweet.id)) {
-            formattedTweets.push(defaultTweet)
+            formattedTweets.push({
+              ...defaultTweet,
+              isEarly: false,
+            })
             existingIds.add(defaultTweet.id)
           }
         }

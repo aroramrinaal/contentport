@@ -12,6 +12,7 @@ export const DEFAULT_TWEETS = [
     text: "a few days ago i posted a full article about how i ship ideas fast af\n\n◆ my step-by-step process\n◆ exact tools i use for building and sharing\n◆ things i actively avoid early on\n\nmakes my day to read stuff like this, we're all gonna make it",
     created_at: "2025-05-07T17:08:18.000Z",
     engagement_score: 150,
+    isEarly: false,
   },
   {
     author_id: "1645473986757664768",
@@ -26,6 +27,7 @@ export const DEFAULT_TWEETS = [
     text: "just got one of the most cracked engineers to join me in building @contentport\n\n◆ cursor, but for content creation\n◆ post great content (tweets, blogs) every day\n◆ 100% open-source\n\nthe world is not ready 👀",
     created_at: "2025-05-17T07:23:04.000Z",
     engagement_score: 200,
+    isEarly: false,
   },
   {
     author_id: "1645473986757664768",
@@ -40,6 +42,7 @@ export const DEFAULT_TWEETS = [
     text: "just onboarded the first 10 users to @contentport 🎉\n\nit's like cursor, but for content creation. i wanted a tool like this for years, so now i'm building it myself\n\nexciting times man",
     created_at: "2025-05-12T14:48:50.000Z",
     engagement_score: 180,
+    isEarly: false,
   },
   {
     id: "1916830901587104247",
@@ -54,6 +57,7 @@ export const DEFAULT_TWEETS = [
       name: "Josh tried coding",
     },
     engagement_score: 120,
+    isEarly: false,
   },
   {
     author: {
@@ -68,6 +72,7 @@ export const DEFAULT_TWEETS = [
     author_id: "1645473986757664768",
     edit_history_tweet_ids: ["1919297643026485727"],
     engagement_score: 100,
+    isEarly: false,
   },
   {
     author: {
@@ -82,6 +87,7 @@ export const DEFAULT_TWEETS = [
     author_id: "1645473986757664768",
     edit_history_tweet_ids: ["1920387639770812654"],
     engagement_score: 90,
+    isEarly: false,
   },
   {
     author_id: "1645473986757664768",
@@ -96,6 +102,7 @@ export const DEFAULT_TWEETS = [
     text: "been shipping a lot recently\n\njosh's step-by-step guide on how to ship fast af 🎉\n\n◆ vibe code a basic prototype\n◆ don't add auth, a relational db or payments\n◆ post the idea to social media\n\nfull article soon 👀",
     created_at: "2025-04-30T15:15:18.000Z",
     engagement_score: 160,
+    isEarly: false,
   },
   {
     author_id: "1645473986757664768",
@@ -110,6 +117,7 @@ export const DEFAULT_TWEETS = [
     text: "im building the best way to create content with ai @contentport\n\nnew: create beautiful tweet visuals in seconds 🎉\n\n◆ zero design skills needed \n◆ drag-and-drop editor\n◆ beautiful presets out of the box",
     created_at: "2025-05-07T15:29:22.000Z",
     engagement_score: 140,
+    isEarly: false,
   },
   {
     edit_history_tweet_ids: ["1919388734790767032"],
@@ -124,6 +132,7 @@ export const DEFAULT_TWEETS = [
     created_at: "2025-05-05T13:48:29.000Z",
     author_id: "1645473986757664768",
     engagement_score: 130,
+    isEarly: false,
   },
   {
     id: "1918258222596575569",
@@ -138,6 +147,7 @@ export const DEFAULT_TWEETS = [
       username: "joshtriedcoding",
     },
     engagement_score: 170,
+    isEarly: false,
   },
   {
     author_id: "1645473986757664768",
@@ -152,6 +162,7 @@ export const DEFAULT_TWEETS = [
     text: "i'm not using the next.js app router navigation for @contentport anymore, the results are kinda amazing\n\n◆ pages load instantly now\n◆ whole app feels way faster\n◆ barely any loading states, even on refresh\n\nthe speed difference is actually wild",
     created_at: "2025-05-12T11:12:00.000Z",
     engagement_score: 110,
+    isEarly: false,
   },
   {
     created_at: "2025-05-14T12:34:58.000Z",
@@ -166,6 +177,7 @@ export const DEFAULT_TWEETS = [
     id: "1922631724002902083",
     text: "a few days ago i posted about moving away from next.js navigation 👀\n\n◆ pages load instantly now\n◆ makes your whole next.js app feel way faster\n◆ takes like 5 min to set up\n\njust published the full post on how i did it 👇",
     engagement_score: 95,
+    isEarly: false,
   },
   {
     author: {
@@ -180,6 +192,7 @@ export const DEFAULT_TWEETS = [
     author_id: "1645473986757664768",
     edit_history_tweet_ids: ["1923661758541054327"],
     engagement_score: 80,
+    isEarly: false,
   },
   {
     author_id: "1247408774614102016",
@@ -194,6 +207,7 @@ export const DEFAULT_TWEETS = [
     text: "Introducing llm.txt support for Context7 🎉\n\n◆ Add documentation from any llms.txt file\n◆ We extract up-to-date code snippets\n\nPerfect for closed-source docs that only provide an llms.txt 👀",
     created_at: "2025-05-12T09:15:04.000Z",
     engagement_score: 85,
+    isEarly: false,
   },
   {
     author_id: "1247408774614102016",
@@ -208,6 +222,7 @@ export const DEFAULT_TWEETS = [
     text: "Most search products suck - they're bloated, expensive and complicated ❌\n\nWe're working on the best way to build search into your app 🎉\n\n◆ 100% serverless, zero infra to manage\n◆ built-in typo tolerance and fuzzy matching\n◆ search through absolutely massive datasets",
     created_at: "2025-05-05T14:54:40.000Z",
     engagement_score: 75,
+    isEarly: false,
   },
   {
     author_id: "1247408774614102016",
@@ -222,6 +237,7 @@ export const DEFAULT_TWEETS = [
     text: "New Quickstart for our DrizzleORM integration! 🎉\n\n◆ Set up caching in seconds\n◆ Great defaults, fully customizable\n◆ Cache auto-updates as data changes\n\nBasically a drop-in package to make Drizzle queries faster 👇",
     created_at: "2025-04-28T13:24:54.000Z",
     engagement_score: 70,
+    isEarly: false,
   },
   {
     author_id: "786375418685165568",
@@ -236,6 +252,7 @@ export const DEFAULT_TWEETS = [
     text: "Our new app is now live! Welcome to T3 Chat, the best AI chat app you've ever used.\n\nThis demo is all real time. It's actually that fast.",
     created_at: "2025-01-10T21:15:00.000Z",
     engagement_score: 65,
+    isEarly: false,
   },
   {
     author_id: "1645473986757664768",
@@ -250,6 +267,7 @@ export const DEFAULT_TWEETS = [
     text: "how to build durable LLM streams that keep working, even when you:\n\n◆ reload the page\n◆ close the site completely\n◆ view the stream on multiple tabs/devices \n\nnow 100% open-source - step-by-step guide below 👇",
     created_at: "2025-04-17T09:46:10.000Z",
     engagement_score: 145,
+    isEarly: false,
   },
   {
     author_id: "1247408774614102016",
@@ -264,6 +282,7 @@ export const DEFAULT_TWEETS = [
     text: "Introducing Context7 – stop Cursor, Claude or any LLM from generating broken, outdated code.\n\nFeed your AI:\n\n◆ Always up-to-date documentation\n◆ Real code examples from official docs\n\nso it writes code that actually works.\n\nPerfect for Next.js, React, Tailwind &amp; more 👇",
     created_at: "2025-04-02T14:50:40.000Z",
     engagement_score: 60,
+    isEarly: false,
   },
   {
     author_id: "1247408774614102016",
@@ -278,5 +297,6 @@ export const DEFAULT_TWEETS = [
     text: "Introducing the Context7 MCP – stop Cursor from generating broken, outdated code.\n\nCursor now automatically adds:\n\n◆ Up-to-date documentation\n◆ Real code examples from official docs\n\nto your prompts - so the code it writes actually works 👇",
     created_at: "2025-04-11T14:12:34.000Z",
     engagement_score: 55,
+    isEarly: false,
   },
 ]

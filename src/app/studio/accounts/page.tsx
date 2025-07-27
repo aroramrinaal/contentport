@@ -253,11 +253,12 @@ export default function AccountsPage() {
   const { mutate: refreshTweets, isPending: isRefreshing } = useMutation({
     mutationFn: async () => {
       if (!account) return
-      await client.settings.refresh_tweets.$post({ accountId: account.id })
+      const res = await client.settings.refresh_tweets.$post({ accountId: account.id })
+      return await res.json()
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       refetchStyle()
-      toast.success('Tweets refreshed successfully! Your AI will now use the latest data.')
+      toast.success(`Tweets refreshed! Loaded ${data?.recentTweetCount || 0} recent + ${data?.earlyTweetCount || 0} early tweets. Your AI now has enhanced style understanding.`)
     },
     onError: (error: HTTPException) => {
       toast.error(error.message)
@@ -581,7 +582,7 @@ export default function AccountsPage() {
                   )}
                 </DuolingoButton>
                 <span className="text-xs text-stone-500">
-                  Load latest 50 tweets with improved filtering
+                  Load latest 50 tweets + first 24 tweets with improved filtering
                 </span>
               </div>
 
