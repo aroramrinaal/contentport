@@ -79,7 +79,12 @@ export const create_three_drafts = ({
       const editorStateMessage: TestUIMessage = {
         role: 'user',
         id: `meta:editor-state:${nanoid()}`,
-        content: await buildEditorStateMessage(chatId, tweet, true),
+        content: [
+          {
+            type: 'text' as const,
+            text: await buildEditorStateMessage(chatId, tweet, true),
+          },
+        ],
       }
 
       let firstDraftMessages: TestUIMessage[] = [
@@ -96,12 +101,19 @@ export const create_three_drafts = ({
         {
           ...userMessage,
           content: [
-            ...userMessage.content,
+            ...(Array.isArray(userMessage.content) 
+              ? userMessage.content.map(item => 
+                  typeof item === 'string' 
+                    ? { type: 'text' as const, text: item }
+                    : item
+                )
+              : [{ type: 'text' as const, text: userMessage.content as string }]
+            ),
             ...unseenAttachments.flat(),
             ...websiteContentMessage,
           ],
         },
-      ]
+      ] as TestUIMessage[]
       let secondDraftMessages: TestUIMessage[] = [
         ...(style
           ? [
@@ -116,12 +128,19 @@ export const create_three_drafts = ({
         {
           ...userMessage,
           content: [
-            ...userMessage.content,
+            ...(Array.isArray(userMessage.content) 
+              ? userMessage.content.map(item => 
+                  typeof item === 'string' 
+                    ? { type: 'text' as const, text: item }
+                    : item
+                )
+              : [{ type: 'text' as const, text: userMessage.content as string }]
+            ),
             ...unseenAttachments.flat(),
             ...websiteContentMessage,
           ],
         },
-      ]
+      ] as TestUIMessage[]
       let thirdDraftMessages: TestUIMessage[] = [
         ...(style
           ? [
@@ -136,12 +155,19 @@ export const create_three_drafts = ({
         {
           ...userMessage,
           content: [
-            ...userMessage.content,
+            ...(Array.isArray(userMessage.content) 
+              ? userMessage.content.map(item => 
+                  typeof item === 'string' 
+                    ? { type: 'text' as const, text: item }
+                    : item
+                )
+              : [{ type: 'text' as const, text: userMessage.content as string }]
+            ),
             ...unseenAttachments.flat(),
             ...websiteContentMessage,
           ],
         },
-      ]
+      ] as TestUIMessage[]
 
       // Add style-specific instructions for each draft
       if (draftStyle?.overall) {

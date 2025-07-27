@@ -74,7 +74,10 @@ export const create_edit_tweet = ({
       const editorStateMessage: TestUIMessage = {
         role: 'user',
         id: `meta:editor-state:${nanoid()}`,
-        content: await buildEditorStateMessage(chatId, tweet, isConversationEmpty),
+        content: [{ 
+          type: 'text', 
+          text: await buildEditorStateMessage(chatId, tweet, isConversationEmpty) 
+        }],
       }
 
       const websiteContentMessage: TextPart[] = websiteContent.map((content) => {
@@ -87,7 +90,7 @@ export const create_edit_tweet = ({
       const systemMessage: TestUIMessage = {
         role: 'system',
         id: `meta:system`,
-        content: editToolSystemPrompt,
+        content: [{ type: 'text', text: editToolSystemPrompt }],
       }
 
       let messages: TestUIMessage[] = [
@@ -100,7 +103,14 @@ export const create_edit_tweet = ({
         {
           ...userMessage,
           content: [
-            ...userMessage.content,
+            ...(Array.isArray(userMessage.content) 
+              ? userMessage.content.map(item => 
+                  typeof item === 'string' 
+                    ? { type: 'text' as const, text: item }
+                    : item
+                )
+              : [{ type: 'text' as const, text: userMessage.content as string }]
+            ),
             ...unseenAttachments.flat(),
             ...websiteContentMessage,
           ],
@@ -126,7 +136,7 @@ export const create_edit_tweet = ({
         redis.json.set(redisKeys.chat, '$', {
           messages: append(messages, {
             role: 'assistant',
-            content: improvedText,
+            content: [{ type: 'text', text: improvedText }],
             id: nanoid(),
           }),
         }),

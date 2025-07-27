@@ -207,7 +207,7 @@ ${promptPart}` : promptPart)
     role: 'user' as const,
     content: [
       {
-        type: 'text',
+        type: 'text' as const,
         text: `${editToolSystemPrompt}
     
 Now, I am setting guidelines for our entire following conversation. It's important that you listen to this message closely.
