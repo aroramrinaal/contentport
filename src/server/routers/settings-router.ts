@@ -21,6 +21,8 @@ export type Account = {
 
 const client = new TwitterApi(process.env.TWITTER_BEARER_TOKEN!).readOnly
 
+const clientV2 = new TwitterApi(process.env.TWITTER_BEARER_TOKEN!).readOnly
+
 interface Settings {
   user: {
     profile_image_url: string
@@ -490,128 +492,167 @@ export const settingsRouter = j.router({
   refresh_tweets: privateProcedure
     .input(z.object({ accountId: z.string() }))
     .mutation(async ({ c, ctx, input }) => {
-      const { user } = ctx
-      const { accountId } = input
+      try {
+        const { user } = ctx
+        const { accountId } = input
 
-      // Get the account from database
-      const dbAccount = await db.query.account.findFirst({
-        where: and(eq(accountSchema.userId, user.id), eq(accountSchema.id, accountId)),
-      })
-
-      if (!dbAccount || !dbAccount.accessToken) {
-        throw new HTTPException(400, {
-          message: 'Twitter account not connected or access token missing',
+        // Get the account from database
+        const dbAccount = await db.query.account.findFirst({
+          where: and(eq(accountSchema.userId, user.id), eq(accountSchema.id, accountId)),
         })
-      }
 
-      // Create Twitter client with user's tokens
-      const client = new TwitterApi({
-        appKey: process.env.TWITTER_CONSUMER_KEY as string,
-        appSecret: process.env.TWITTER_CONSUMER_SECRET as string,
-        accessToken: dbAccount.accessToken as string,
-        accessSecret: dbAccount.accessSecret as string,
-      })
+        if (!dbAccount || !dbAccount.accessToken) {
+          throw new HTTPException(400, {
+            message: 'Twitter account not connected or access token missing',
+          })
+        }
 
-      // Get user profile
-      const userProfile = await client.currentUser()
-      const { data } = await client.v2.userByUsername(userProfile.screen_name, {
-        'user.fields': ['verified', 'verified_type'],
-      })
-
-      // Fetch fresh tweets with new system
-      const userTweets = await client.v2.userTimeline(userProfile.id_str, {
-        max_results: 50, // Using the new limit
-        'tweet.fields': [
-          'public_metrics',
-          'created_at',
-          'text',
-          'author_id',
-          'note_tweet',
-          'edit_history_tweet_ids',
-          'in_reply_to_user_id',
-          'referenced_tweets',
-        ],
-        'user.fields': ['username', 'profile_image_url', 'name'],
-        exclude: ['retweets', 'replies'],
-        expansions: ['author_id'],
-      })
-
-      const styleKey = `style:${user.email}:${accountId}`
-
-      if (!userTweets.data.data) {
-        await redis.json.set(styleKey, '$', {
-          tweets: DEFAULT_TWEETS,
-          prompt: '',
+        // Create Twitter client with user's tokens
+        const client = new TwitterApi({
+          appKey: process.env.TWITTER_CONSUMER_KEY as string,
+          appSecret: process.env.TWITTER_CONSUMER_SECRET as string,
+          accessToken: dbAccount.accessToken as string,
+          accessSecret: dbAccount.accessSecret as string,
         })
-      } else {
-        const filteredTweets = userTweets.data.data?.filter(
-          (tweet) =>
-            !tweet.in_reply_to_user_id &&
-            !tweet.referenced_tweets?.some((ref) => ref.type === 'replied_to') &&
-            tweet.text.length > 20 &&
-            tweet.text.length < 280,
-        )
-        
-        const tweetsWithStats = filteredTweets.map((tweet) => ({
-          id: tweet.id,
-          text: tweet.text,
-          likes: tweet.public_metrics?.like_count || 0,
-          retweets: tweet.public_metrics?.retweet_count || 0,
-          replies: tweet.public_metrics?.reply_count || 0,
-          created_at: tweet.created_at || '',
-          engagement_score: (tweet.public_metrics?.like_count || 0) + 
-                          (tweet.public_metrics?.retweet_count || 0) * 2 + 
-                          (tweet.public_metrics?.reply_count || 0) * 3,
-        }))
-        
-        const sortedTweets = tweetsWithStats.sort((a, b) => b.engagement_score - a.engagement_score)
-        const topTweets = sortedTweets.slice(0, 30)
-        const author = userProfile
-        let formattedTweets = topTweets.map((tweet) => {
-          const cleanedText = tweet.text.replace(/https:\/\/t\.co\/\w+/g, '').trim()
-          return {
+
+        // Get user profile
+        const userProfile = await client.currentUser()
+        const { data } = await clientV2.v2.userByUsername(userProfile.screen_name, {
+          'user.fields': ['verified', 'verified_type'],
+        })
+
+        // Fetch fresh tweets with new system
+        const userTweets = await client.v2.userTimeline(userProfile.id_str, {
+          max_results: 50, // Using the new limit
+          'tweet.fields': [
+            'public_metrics',
+            'created_at',
+            'text',
+            'author_id',
+            'note_tweet',
+            'edit_history_tweet_ids',
+            'in_reply_to_user_id',
+            'referenced_tweets',
+          ],
+          'user.fields': ['username', 'profile_image_url', 'name'],
+          exclude: ['retweets', 'replies'],
+          expansions: ['author_id'],
+        })
+
+        const styleKey = `style:${user.email}:${accountId}`
+
+        if (!userTweets.data.data) {
+          await redis.json.set(styleKey, '$', {
+            tweets: DEFAULT_TWEETS,
+            prompt: '',
+          })
+        } else {
+          const filteredTweets = userTweets.data.data?.filter(
+            (tweet) =>
+              !tweet.in_reply_to_user_id &&
+              !tweet.referenced_tweets?.some((ref) => ref.type === 'replied_to') &&
+              tweet.text.length > 20 &&
+              tweet.text.length < 280,
+          )
+          
+          const tweetsWithStats = filteredTweets.map((tweet) => ({
             id: tweet.id,
-            text: cleanedText,
-            created_at: tweet.created_at,
-            author_id: userProfile.id_str,
-            edit_history_tweet_ids: [tweet.id],
-            engagement_score: tweet.engagement_score,
-            author: author
-              ? {
-                  username: author.screen_name,
-                  profile_image_url: author.profile_image_url_https,
-                  name: author.name,
-                }
-              : null,
-          }
-        })
-        
-        if (formattedTweets.length < 30) {
-          const existingIds = new Set(formattedTweets.map((t) => t.id))
-          for (const defaultTweet of DEFAULT_TWEETS) {
-            if (formattedTweets.length >= 30) break
-            if (!existingIds.has(defaultTweet.id)) {
-              formattedTweets.push(defaultTweet)
-              existingIds.add(defaultTweet.id)
+            text: tweet.text,
+            likes: tweet.public_metrics?.like_count || 0,
+            retweets: tweet.public_metrics?.retweet_count || 0,
+            replies: tweet.public_metrics?.reply_count || 0,
+            created_at: tweet.created_at || '',
+            engagement_score: (tweet.public_metrics?.like_count || 0) + 
+                            (tweet.public_metrics?.retweet_count || 0) * 2 + 
+                            (tweet.public_metrics?.reply_count || 0) * 3,
+          }))
+          
+          const sortedTweets = tweetsWithStats.sort((a, b) => b.engagement_score - a.engagement_score)
+          const topTweets = sortedTweets.slice(0, 30)
+          const author = userProfile
+          let formattedTweets = topTweets.map((tweet) => {
+            const cleanedText = tweet.text.replace(/https:\/\/t\.co\/\w+/g, '').trim()
+            return {
+              id: tweet.id,
+              text: cleanedText,
+              created_at: tweet.created_at,
+              author_id: userProfile.id_str,
+              edit_history_tweet_ids: [tweet.id],
+              engagement_score: tweet.engagement_score,
+              author: author
+                ? {
+                    username: author.screen_name,
+                    profile_image_url: author.profile_image_url_https,
+                    name: author.name,
+                  }
+                : null,
+            }
+          })
+          
+          if (formattedTweets.length < 30) {
+            const existingIds = new Set(formattedTweets.map((t) => t.id))
+            for (const defaultTweet of DEFAULT_TWEETS) {
+              if (formattedTweets.length >= 30) break
+              if (!existingIds.has(defaultTweet.id)) {
+                formattedTweets.push(defaultTweet)
+                existingIds.add(defaultTweet.id)
+              }
             }
           }
+          
+          await redis.json.set(styleKey, '$', {
+            tweets: formattedTweets.reverse(),
+            prompt: '',
+          })
+          
+          // Re-analyze style with new tweets
+          const styleAnalysis = await analyzeUserStyle(formattedTweets)
+          const draftStyleKey = `draft-style:${accountId}`
+          await redis.json.set(draftStyleKey, '$', styleAnalysis)
         }
-        
-        await redis.json.set(styleKey, '$', {
-          tweets: formattedTweets.reverse(),
-          prompt: '',
-        })
-        
-        // Re-analyze style with new tweets
-        const styleAnalysis = await analyzeUserStyle(formattedTweets)
-        const draftStyleKey = `draft-style:${accountId}`
-        await redis.json.set(draftStyleKey, '$', styleAnalysis)
-      }
 
-      return c.json({ 
-        success: true, 
-        message: 'Tweets refreshed successfully',
-        tweetCount: userTweets.data.data?.length || 0
-      })
+        return c.json({ 
+          success: true, 
+          message: 'Tweets refreshed successfully',
+          tweetCount: userTweets.data.data?.length || 0
+        })
+      } catch (error) {
+        console.error('Error refreshing tweets:', error)
+        throw new HTTPException(500, {
+          message: 'Failed to refresh tweets. Please try again.',
+        })
+      }
+    }),
+
+  test_refresh: privateProcedure
+    .input(z.object({ accountId: z.string() }))
+    .mutation(async ({ c, ctx, input }) => {
+      try {
+        const { user } = ctx
+        const { accountId } = input
+
+        // Get the account from database
+        const dbAccount = await db.query.account.findFirst({
+          where: and(eq(accountSchema.userId, user.id), eq(accountSchema.id, accountId)),
+        })
+
+        if (!dbAccount || !dbAccount.accessToken) {
+          throw new HTTPException(400, {
+            message: 'Twitter account not connected or access token missing',
+          })
+        }
+
+        return c.json({ 
+          success: true, 
+          message: 'Account found, tokens available',
+          hasAccessToken: !!dbAccount.accessToken,
+          hasAccessSecret: !!dbAccount.accessSecret
+        })
+      } catch (error) {
+        console.error('Error testing refresh:', error)
+        throw new HTTPException(500, {
+          message: 'Failed to test refresh. Please try again.',
+        })
+      }
     }),
 })

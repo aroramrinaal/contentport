@@ -264,6 +264,20 @@ export default function AccountsPage() {
     },
   })
 
+  const { mutate: testRefresh, isPending: isTesting } = useMutation({
+    mutationFn: async () => {
+      if (!account) return
+      const res = await client.settings.test_refresh.$post({ accountId: account.id })
+      return await res.json()
+    },
+    onSuccess: (data) => {
+      toast.success(`Test successful: ${data?.message || 'Account tokens verified'}`)
+    },
+    onError: (error: HTTPException) => {
+      toast.error(error.message)
+    },
+  })
+
   const { data: style, refetch: refetchStyle } = useQuery({
     queryKey: ['account-style', account?.id],
     queryFn: async () => {
@@ -548,6 +562,22 @@ export default function AccountsPage() {
                     </>
                   ) : (
                     '🔄 Refresh Tweets'
+                  )}
+                </DuolingoButton>
+                <DuolingoButton
+                  onClick={() => testRefresh()}
+                  disabled={isTesting || !account}
+                  variant="secondary"
+                  size="sm"
+                  className="w-fit"
+                >
+                  {isTesting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Testing...
+                    </>
+                  ) : (
+                    '🧪 Test Tokens'
                   )}
                 </DuolingoButton>
                 <span className="text-xs text-stone-500">
