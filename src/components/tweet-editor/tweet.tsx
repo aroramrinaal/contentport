@@ -53,7 +53,7 @@ import { Loader } from '../ui/loader'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip'
 import ContentLengthIndicator from './content-length-indicator'
-import { Calendar20 } from './date-picker'
+import { ScheduleModal } from './schedule-modal'
 import { ImageTool } from './image-tool'
 
 interface TweetProps {
@@ -88,6 +88,7 @@ export default function Tweet({ editMode = false, editTweetId }: TweetProps) {
   const [imageDrawerOpen, setImageDrawerOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [showPostConfirmModal, setShowPostConfirmModal] = useState(false)
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [dontShowAgain, setDontShowAgain] = useState(false)
 
   // Add video to chat attachments
@@ -1251,42 +1252,27 @@ export default function Tweet({ editMode = false, editTweetId }: TweetProps) {
                     {editMode ? (
                       <>
                         <TooltipProvider>
-                          <Tooltip>
-                            <Popover>
+                                                      <Tooltip>
                               <TooltipTrigger asChild>
-                                <PopoverTrigger asChild>
-                                  <DuolingoButton
-                                    loading={scheduleTweetMutation.isPending}
-                                    disabled={
-                                      updateTweetMutation.isPending ||
-                                      scheduleTweetMutation.isPending
-                                    }
-                                    variant="secondary"
-                                    size="icon"
-                                    className="aspect-square h-11 w-11"
-                                  >
-                                    <CalendarCog className="size-5" />
-                                    <span className="sr-only">Reschedule tweet</span>
-                                  </DuolingoButton>
-                                </PopoverTrigger>
-                              </TooltipTrigger>
-                              <PopoverContent className="max-w-3xl w-full">
-                                <Calendar20
-                                  editMode={editMode}
-                                  onSchedule={handleScheduleTweet}
-                                  isPending={scheduleTweetMutation.isPending}
-                                  initialScheduledTime={
-                                    editTweetData?.tweet?.scheduledFor
-                                      ? new Date(editTweetData.tweet.scheduledFor)
-                                      : undefined
+                                <DuolingoButton
+                                  loading={scheduleTweetMutation.isPending}
+                                  disabled={
+                                    updateTweetMutation.isPending ||
+                                    scheduleTweetMutation.isPending
                                   }
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <TooltipContent>
-                              <p>Reschedule tweet</p>
-                            </TooltipContent>
-                          </Tooltip>
+                                  variant="secondary"
+                                  size="icon"
+                                  className="aspect-square h-11 w-11"
+                                  onClick={() => setShowScheduleModal(true)}
+                                >
+                                  <CalendarCog className="size-5" />
+                                  <span className="sr-only">Reschedule tweet</span>
+                                </DuolingoButton>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Reschedule tweet</p>
+                              </TooltipContent>
+                            </Tooltip>
 
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1341,7 +1327,7 @@ export default function Tweet({ editMode = false, editTweetId }: TweetProps) {
                                   loading={isQueueing}
                                   disabled={mediaFiles.some((f) => f.uploading)}
                                   className="h-11 px-3 rounded-r-none border-r-0"
-                                  onClick={handleAddToQueue}
+                                  onClick={() => setShowScheduleModal(true)}
                                 >
                                   <Clock className="size-4 mr-2" />
                                   <span className="text-sm">Queue</span>
@@ -1349,39 +1335,24 @@ export default function Tweet({ editMode = false, editTweetId }: TweetProps) {
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>
-                                  Add to next queue slot -{' '}
-                                  <Link
-                                    href="/studio/scheduled"
-                                    className="underline decoration-2 underline-offset-2"
-                                  >
-                                    what is this?
-                                  </Link>
+                                  Open scheduling options - queue or custom time
                                 </p>
                               </TooltipContent>
                             </Tooltip>
 
                             <Tooltip>
-                              <Popover>
-                                <TooltipTrigger asChild>
-                                  <PopoverTrigger asChild>
-                                    <DuolingoButton
-                                      loading={scheduleTweetMutation.isPending}
-                                      disabled={mediaFiles.some((f) => f.uploading)}
-                                      size="icon"
-                                      className="h-11 w-14 rounded-l-none border-l"
-                                    >
-                                      <ChevronDown className="size-4" />
-                                      <span className="sr-only">Schedule manually</span>
-                                    </DuolingoButton>
-                                  </PopoverTrigger>
-                                </TooltipTrigger>
-                                <PopoverContent className="max-w-3xl w-full">
-                                  <Calendar20
-                                    onSchedule={handleScheduleTweet}
-                                    isPending={scheduleTweetMutation.isPending}
-                                  />
-                                </PopoverContent>
-                              </Popover>
+                              <TooltipTrigger asChild>
+                                <DuolingoButton
+                                  loading={scheduleTweetMutation.isPending}
+                                  disabled={mediaFiles.some((f) => f.uploading)}
+                                  size="icon"
+                                  className="h-11 w-14 rounded-l-none border-l"
+                                  onClick={() => setShowScheduleModal(true)}
+                                >
+                                  <ChevronDown className="size-4" />
+                                  <span className="sr-only">Schedule manually</span>
+                                </DuolingoButton>
+                              </TooltipTrigger>
                               <TooltipContent>
                                 <p>Schedule custom time</p>
                               </TooltipContent>
@@ -1434,6 +1405,23 @@ export default function Tweet({ editMode = false, editTweetId }: TweetProps) {
           </DrawerContent>
         </Drawer>
       </Drawer>
+
+      {/* Schedule Modal */}
+      {showScheduleModal && (
+        <ScheduleModal
+          onSchedule={handleScheduleTweet}
+          onQueue={handleAddToQueue}
+          isPending={scheduleTweetMutation.isPending}
+          isQueueing={isQueueing}
+          initialScheduledTime={
+            editTweetData?.tweet?.scheduledFor
+              ? new Date(editTweetData.tweet.scheduledFor)
+              : undefined
+          }
+          editMode={editMode}
+          onClose={() => setShowScheduleModal(false)}
+        />
+      )}
 
       <Dialog open={showPostConfirmModal} onOpenChange={setShowPostConfirmModal}>
         <DialogContent className="sm:max-w-[425px]">

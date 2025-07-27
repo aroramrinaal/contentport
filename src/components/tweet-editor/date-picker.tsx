@@ -8,6 +8,8 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { DayFlag, DayPicker, SelectionState, UI } from 'react-day-picker'
 import { cn } from '@/lib/utils'
 import DuolingoButton from '../ui/duolingo-button'
+import DuolingoInput from '../ui/duolingo-input'
+import { Clock } from 'lucide-react'
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
   onSchedule?: (date: Date, time: string) => void
@@ -70,6 +72,8 @@ export const Calendar20 = ({
   const [selectedTime, setSelectedTime] = React.useState<string | null>(
     getInitialTime(),
   )
+  const [customTime, setCustomTime] = React.useState<string>('')
+  const [useCustomTime, setUseCustomTime] = React.useState<boolean>(false)
 
   const isTimeSlotDisabled = (timeString: string) => {
     if (!date || date.toDateString() !== today.toDateString()) {
@@ -89,6 +93,32 @@ export const Calendar20 = ({
     const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
     const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
     return dateOnly < todayOnly
+  }
+
+  const validateCustomTime = (time: string): boolean => {
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
+    return timeRegex.test(time)
+  }
+
+  const handleCustomTimeChange = (value: string) => {
+    setCustomTime(value)
+    if (validateCustomTime(value)) {
+      setSelectedTime(value)
+      setUseCustomTime(true)
+    }
+  }
+
+  const handleTimeSlotClick = (time: string) => {
+    setSelectedTime(time)
+    setUseCustomTime(false)
+    setCustomTime('')
+  }
+
+  const getCurrentTimeValue = (): string => {
+    if (useCustomTime && customTime) {
+      return customTime
+    }
+    return selectedTime || ''
   }
 
   return (
@@ -129,18 +159,6 @@ export const Calendar20 = ({
               [UI.Weekday]:
                 'text-muted-foreground rounded-md w-12 font-normal text-[0.8rem]',
               [UI.Week]: 'flex w-full mt-2',
-              //   [UI.Day]:
-              //     'h-9 w-9 text-center rounded-md text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
-              //   [UI.DayButton]: cn(
-              //     buttonVariants({ variant: 'ghost' }),
-              //     'h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-primary hover:text-primary-foreground',
-              //   ),
-              //   [SelectionState.range_end]: 'day-range-end',
-              //   [SelectionState.selected]:
-              //     'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
-              //   [SelectionState.range_middle]:
-              //     'aria-selected:bg-accent aria-selected:text-accent-foreground',
-              //   [DayFlag.today]: 'bg-accent text-accent-foreground',
               [DayFlag.outside]:
                 'day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30',
               [DayFlag.disabled]: 'text-muted-foreground opacity-50',
@@ -150,25 +168,57 @@ export const Calendar20 = ({
           />
         </div>
         <div className="no-scrollbar inset-y-0 right-0 flex max-h-72 w-full scroll-pb-6 flex-col gap-4 overflow-y-auto border-t p-6 md:absolute md:max-h-none md:w-48 md:border-t-0 md:border-l">
-          <div className="grid gap-2">
-            {timeSlots
-              .filter((time) => !isTimeSlotDisabled(time))
-              .map((time) => (
-                <Button
-                  key={time}
-                  variant={selectedTime === time ? 'default' : 'outline'}
-                  onClick={() => setSelectedTime(time)}
-                  className="w-full shadow-none"
-                >
-                  {time}
-                </Button>
-              ))}
+          {/* Custom Time Input Section */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Clock className="size-4 text-stone-500" />
+              <span className="text-sm font-medium text-stone-700">Custom Time</span>
+            </div>
+            <DuolingoInput
+              type="time"
+              placeholder="HH:MM"
+              value={customTime}
+              onChange={(e) => handleCustomTimeChange(e.target.value)}
+              size="sm"
+              icon={<Clock className="size-4" />}
+              helperText={customTime && !validateCustomTime(customTime) ? "Please enter a valid time (HH:MM)" : ""}
+              variant={customTime && !validateCustomTime(customTime) ? "error" : "default"}
+            />
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-px bg-stone-200" />
+            <span className="text-xs text-stone-500 px-2">or choose from</span>
+            <div className="flex-1 h-px bg-stone-200" />
+          </div>
+
+          {/* Predefined Time Slots */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Clock className="size-4 text-stone-500" />
+              <span className="text-sm font-medium text-stone-700">Quick Times</span>
+            </div>
+            <div className="grid gap-2">
+              {timeSlots
+                .filter((time) => !isTimeSlotDisabled(time))
+                .map((time) => (
+                  <Button
+                    key={time}
+                    variant={selectedTime === time && !useCustomTime ? 'default' : 'outline'}
+                    onClick={() => handleTimeSlotClick(time)}
+                    className="w-full shadow-none"
+                  >
+                    {time}
+                  </Button>
+                ))}
+            </div>
           </div>
         </div>
       </CardContent>
       <CardFooter className="flex flex-col gap-4 border-t px-6 !py-5 md:flex-row">
         <div className="text-sm">
-          {date && selectedTime ? (
+          {date && getCurrentTimeValue() ? (
             <>
               {editMode ? 'Rescheduled for' : 'Scheduled for'}{' '}
               <span className="font-medium">
@@ -179,7 +229,7 @@ export const Calendar20 = ({
                   month: 'long',
                 })}{' '}
               </span>
-              at <span className="font-medium">{selectedTime}</span>.
+              at <span className="font-medium">{getCurrentTimeValue()}</span>.
             </>
           ) : (
             <>Select a date and time for your meeting.</>
@@ -188,14 +238,14 @@ export const Calendar20 = ({
         <DuolingoButton
           loading={isPending}
           size="sm"
-          disabled={!date || !selectedTime}
+          disabled={!date || !getCurrentTimeValue()}
           className="w-full md:ml-auto md:w-auto"
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
             
-            if (date && selectedTime && onSchedule) {
-              onSchedule(date, selectedTime)
+            if (date && getCurrentTimeValue() && onSchedule) {
+              onSchedule(date, getCurrentTimeValue())
             }
           }}
         >
