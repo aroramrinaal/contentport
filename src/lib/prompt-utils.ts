@@ -204,7 +204,7 @@ ${promptPart}` : promptPart)
 
   return {
     id: `style:${nanoid()}`,
-    role: 'user',
+    role: 'user' as const,
     content: `${editToolSystemPrompt}
     
 Now, I am setting guidelines for our entire following conversation. It's important that you listen to this message closely.
