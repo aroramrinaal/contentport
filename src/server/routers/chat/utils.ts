@@ -88,25 +88,88 @@ export const parseAttachments = async ({
         const contentType = data.ContentType as keyof typeof FILE_TYPE_MAP
 
         const type = FILE_TYPE_MAP[contentType as keyof typeof FILE_TYPE_MAP]
-        const url = `https://${BUCKET_NAME}.s3.amazonaws.com/${attachment.fileKey}`
 
         if (!type) {
           console.warn(`Unknown content type: ${contentType} for file: ${attachment.fileKey}`)
-          return { type: 'file' as const, data: url, mimeType: contentType } as FilePart
+          // For unknown types, try to fetch using S3 SDK
+          try {
+            const getObjectCommand = new GetObjectCommand({
+              Bucket: BUCKET_NAME,
+              Key: attachment.fileKey,
+            })
+            
+            const s3Response = await s3Client.send(getObjectCommand)
+            
+            if (!s3Response.Body) {
+              throw new Error('No file body received from S3')
+            }
+            
+            const uint8Array = await s3Response.Body.transformToByteArray()
+            const buffer = uint8Array.buffer as ArrayBuffer
+            
+            return { 
+              type: 'file' as const, 
+              data: buffer, 
+              mimeType: contentType 
+            } as FilePart
+          } catch (error) {
+            console.error(`Error fetching unknown file type from S3: ${attachment.fileKey}`, error)
+            throw new Error(`Failed to fetch file from S3: ${attachment.fileKey}`)
+          }
         }
 
         if (type === 'image') {
-          return { type: 'image' as const, image: url } as ImagePart
+          // For images, we need to fetch the actual image data using S3 SDK
+          try {
+            const getObjectCommand = new GetObjectCommand({
+              Bucket: BUCKET_NAME,
+              Key: attachment.fileKey,
+            })
+            
+            const s3Response = await s3Client.send(getObjectCommand)
+            
+            if (!s3Response.Body) {
+              throw new Error('No file body received from S3')
+            }
+            
+            const uint8Array = await s3Response.Body.transformToByteArray()
+            const buffer = uint8Array.buffer as ArrayBuffer
+            
+            return { 
+              type: 'image' as const, 
+              image: buffer 
+            } as ImagePart
+          } catch (error) {
+            console.error(`Error fetching image from S3: ${attachment.fileKey}`, error)
+            throw new Error(`Failed to fetch image from S3: ${attachment.fileKey}`)
+          }
         } else if (type === 'docx') {
-          const response = await fetch(url)
-          const buffer = await response.arrayBuffer()
-          const { value } = await mammoth.extractRawText({
-            buffer: Buffer.from(buffer),
-          })
-          return {
-            type: 'text' as const,
-            text: `<attached_docx>${value}</attached_docx>`,
-          } as TextPart
+          try {
+            const getObjectCommand = new GetObjectCommand({
+              Bucket: BUCKET_NAME,
+              Key: attachment.fileKey,
+            })
+            
+            const s3Response = await s3Client.send(getObjectCommand)
+            
+            if (!s3Response.Body) {
+              throw new Error('No file body received from S3')
+            }
+            
+            const uint8Array = await s3Response.Body.transformToByteArray()
+            const buffer = Buffer.from(uint8Array)
+            
+            const { value } = await mammoth.extractRawText({
+              buffer: buffer,
+            })
+            return {
+              type: 'text' as const,
+              text: `<attached_docx>${value}</attached_docx>`,
+            } as TextPart
+          } catch (error) {
+            console.error(`Error fetching docx from S3: ${attachment.fileKey}`, error)
+            throw new Error(`Failed to fetch docx from S3: ${attachment.fileKey}`)
+          }
         } else if (attachment.type === 'video') {
           // Handle video transcript
           const transcript = await fetchVideoTranscript(attachment.fileKey!)
@@ -124,13 +187,35 @@ export const parseAttachments = async ({
             } as TextPart
           }
         } else {
-          return { type: 'file' as const, data: url, mimeType: contentType } as FilePart
+          // For other file types, try to fetch using S3 SDK
+          try {
+            const getObjectCommand = new GetObjectCommand({
+              Bucket: BUCKET_NAME,
+              Key: attachment.fileKey,
+            })
+            
+            const s3Response = await s3Client.send(getObjectCommand)
+            
+            if (!s3Response.Body) {
+              throw new Error('No file body received from S3')
+            }
+            
+            const uint8Array = await s3Response.Body.transformToByteArray()
+            const buffer = uint8Array.buffer as ArrayBuffer
+            
+            return { 
+              type: 'file' as const, 
+              data: buffer, 
+              mimeType: contentType 
+            } as FilePart
+          } catch (error) {
+            console.error(`Error fetching file from S3: ${attachment.fileKey}`, error)
+            throw new Error(`Failed to fetch file from S3: ${attachment.fileKey}`)
+          }
         }
       } catch (error) {
         console.error(`Error processing attachment ${attachment.fileKey}:`, error)
-        // Return a fallback file part if S3 operations fail
-        const url = `https://${BUCKET_NAME}.s3.amazonaws.com/${attachment.fileKey}`
-        return { type: 'file' as const, data: url, mimeType: 'application/octet-stream' } as FilePart
+        throw new Error(`Failed to process attachment: ${attachment.fileKey}`)
       }
     })
   )
