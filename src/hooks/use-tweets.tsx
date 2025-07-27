@@ -124,6 +124,8 @@ interface TweetContextType {
   setMediaFiles: React.Dispatch<React.SetStateAction<MediaFile[]>>
   charCount: number
   setCharCount: React.Dispatch<React.SetStateAction<number>>
+  isGeneratingDrafts: boolean
+  setIsGeneratingDrafts: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 const TweetContext = createContext<TweetContextType | undefined>(undefined)
@@ -171,6 +173,7 @@ export function TweetProvider({ children }: PropsWithChildren) {
 
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [selectedDraftIndex, setSelectedDraftIndex] = useState(0)
+  const [isGeneratingDrafts, setIsGeneratingDrafts] = useState(false)
 
   const [toolErrors, setToolErrors] = useState<Record<string, string>>({})
 
@@ -574,6 +577,8 @@ export function TweetProvider({ children }: PropsWithChildren) {
         clearToolError,
         selectedDraftIndex,
         setSelectedDraftIndex,
+        isGeneratingDrafts,
+        setIsGeneratingDrafts,
       }}
     >
       {children}

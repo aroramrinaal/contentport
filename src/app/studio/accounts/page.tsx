@@ -250,6 +250,20 @@ export default function AccountsPage() {
     },
   })
 
+  const { mutate: refreshTweets, isPending: isRefreshing } = useMutation({
+    mutationFn: async () => {
+      if (!account) return
+      await client.settings.refresh_tweets.$post({ accountId: account.id })
+    },
+    onSuccess: () => {
+      refetchStyle()
+      toast.success('Tweets refreshed successfully! Your AI will now use the latest data.')
+    },
+    onError: (error: HTTPException) => {
+      toast.error(error.message)
+    },
+  })
+
   const { data: style, refetch: refetchStyle } = useQuery({
     queryKey: ['account-style', account?.id],
     queryFn: async () => {
@@ -517,6 +531,28 @@ export default function AccountsPage() {
                 <p className="opacity-60 text-sm">
                   Import tweets that exemplify your desired writing style
                 </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <DuolingoButton
+                  onClick={() => refreshTweets()}
+                  disabled={isRefreshing || !account}
+                  variant="secondary"
+                  size="sm"
+                  className="w-fit"
+                >
+                  {isRefreshing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Refreshing...
+                    </>
+                  ) : (
+                    '🔄 Refresh Tweets'
+                  )}
+                </DuolingoButton>
+                <span className="text-xs text-stone-500">
+                  Load latest 50 tweets with improved filtering
+                </span>
               </div>
 
               <div className="flex items-center space-x-2">

@@ -224,7 +224,7 @@ export const authRouter = j.router({
     }
 
     const userTweets = await loggedInClient.v2.userTimeline(userProfile.id_str, {
-      max_results: 30,
+      max_results: 50, // Increased from 30 to 50 (Twitter API limit)
       'tweet.fields': [
         'public_metrics',
         'created_at',
@@ -252,17 +252,26 @@ export const authRouter = j.router({
       const filteredTweets = userTweets.data.data?.filter(
         (tweet) =>
           !tweet.in_reply_to_user_id &&
-          !tweet.referenced_tweets?.some((ref) => ref.type === 'replied_to'),
+          !tweet.referenced_tweets?.some((ref) => ref.type === 'replied_to') &&
+          tweet.text.length > 20 && // Only tweets with substantial content
+          tweet.text.length < 280, // Exclude very long tweets
       )
+      
       const tweetsWithStats = filteredTweets.map((tweet) => ({
         id: tweet.id,
         text: tweet.text,
         likes: tweet.public_metrics?.like_count || 0,
         retweets: tweet.public_metrics?.retweet_count || 0,
+        replies: tweet.public_metrics?.reply_count || 0,
         created_at: tweet.created_at || '',
+        engagement_score: (tweet.public_metrics?.like_count || 0) + 
+                        (tweet.public_metrics?.retweet_count || 0) * 2 + 
+                        (tweet.public_metrics?.reply_count || 0) * 3,
       }))
-      const sortedTweets = tweetsWithStats.sort((a, b) => b.likes - a.likes)
-      const topTweets = sortedTweets.slice(0, 20)
+      
+      // Sort by engagement score instead of just likes
+      const sortedTweets = tweetsWithStats.sort((a, b) => b.engagement_score - a.engagement_score)
+      const topTweets = sortedTweets.slice(0, 30) // Increased from 20 to 30
       const author = userProfile
       let formattedTweets = topTweets.map((tweet) => {
         const cleanedText = tweet.text.replace(/https:\/\/t\.co\/\w+/g, '').trim()
@@ -272,6 +281,7 @@ export const authRouter = j.router({
           created_at: tweet.created_at,
           author_id: userProfile.id_str,
           edit_history_tweet_ids: [tweet.id],
+          engagement_score: tweet.engagement_score,
           author: author
             ? {
                 username: author.screen_name,
@@ -281,10 +291,11 @@ export const authRouter = j.router({
             : null,
         }
       })
-      if (formattedTweets.length < 20) {
+      
+      if (formattedTweets.length < 30) {
         const existingIds = new Set(formattedTweets.map((t) => t.id))
         for (const defaultTweet of DEFAULT_TWEETS) {
-          if (formattedTweets.length >= 20) break
+          if (formattedTweets.length >= 30) break
           if (!existingIds.has(defaultTweet.id)) {
             formattedTweets.push(defaultTweet)
             existingIds.add(defaultTweet.id)

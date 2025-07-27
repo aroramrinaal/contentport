@@ -143,6 +143,33 @@ export const create_three_drafts = ({
         },
       ]
 
+      // Add style-specific instructions for each draft
+      if (draftStyle?.overall) {
+        const styleInstructions = [
+          "Create a draft that follows the user's writing style closely",
+          "Create a draft with a slightly different angle while maintaining the style",
+          "Create a draft that explores a more creative variation of the style"
+        ]
+        
+        firstDraftMessages.push({
+          role: 'user',
+          id: `style-instruction-1:${nanoid()}`,
+          content: [{ type: 'text', text: styleInstructions[0] || '' }]
+        })
+        
+        secondDraftMessages.push({
+          role: 'user',
+          id: `style-instruction-2:${nanoid()}`,
+          content: [{ type: 'text', text: styleInstructions[1] || '' }]
+        })
+        
+        thirdDraftMessages.push({
+          role: 'user',
+          id: `style-instruction-3:${nanoid()}`,
+          content: [{ type: 'text', text: styleInstructions[2] || '' }]
+        })
+      }
+
       const chatModel = openrouter.chat('anthropic/claude-sonnet-4', {
         reasoning: { effort: 'low' },
         models: ['anthropic/claude-3.7-sonnet', 'google/gemini-2.5-pro'],
@@ -151,21 +178,21 @@ export const create_three_drafts = ({
       const [draft1, draft2, draft3] = await Promise.all([
         generateText({
           model: chatModel,
-          temperature: 0.10,
+          temperature: 0.7, // Increased from 0.10 for more creative drafts
           system: editToolSystemPrompt,
           // @ts-ignore
           messages: firstDraftMessages,
         }),
         generateText({
           model: chatModel,
-          temperature: 0.10,
+          temperature: 0.8, // Slightly higher for second draft
           system: editToolSystemPrompt,
           // @ts-ignore
           messages: secondDraftMessages,
         }),
         generateText({
           model: chatModel,
-          temperature: 0.10,
+          temperature: 0.9, // Highest for third draft to explore different angles
           system: editToolSystemPrompt,
           // @ts-ignore
           messages: thirdDraftMessages,
