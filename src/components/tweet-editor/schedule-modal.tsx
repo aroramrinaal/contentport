@@ -361,6 +361,7 @@ export const ScheduleModal = ({
           <DuolingoButton
             variant="secondary"
             onClick={onClose}
+            size="md"
           >
             Cancel
           </DuolingoButton>
@@ -371,18 +372,24 @@ export const ScheduleModal = ({
                 loading={isQueueing}
                 onClick={handleQueueClick}
                 disabled={!date}
+                size="md"
+                className="min-w-[140px]"
               >
                 <Zap className="size-4 mr-2" />
-                Add to Queue
+                <span className="whitespace-nowrap">Add to Queue</span>
               </DuolingoButton>
             ) : (
               <DuolingoButton
                 loading={isPending}
                 onClick={handleScheduleClick}
                 disabled={!date || !getCurrentTimeValue()}
+                size="md"
+                className="min-w-[140px]"
               >
                 <CalendarIcon className="size-4 mr-2" />
-                {editMode ? 'Reschedule' : 'Schedule'}
+                <span className="whitespace-nowrap">
+                  {editMode ? 'Reschedule' : 'Schedule'}
+                </span>
               </DuolingoButton>
             )}
           </div>
