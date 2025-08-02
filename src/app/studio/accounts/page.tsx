@@ -49,7 +49,7 @@ import {
   UserPlus,
   X,
 } from 'lucide-react'
-import posthog from 'posthog-js'
+// import posthog from 'posthog-js'
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 
@@ -158,11 +158,11 @@ export default function AccountsPage() {
       return await res.json()
     },
     onSuccess: ({ account }) => {
-      posthog.capture('account_switched', {
-        accountId: account.id,
-        accountName: account.name,
-        accountUsername: account.username,
-      })
+      // posthog.capture('account_switched', {
+      //   accountId: account.id,
+      //   accountName: account.name,
+      //   accountUsername: account.username,
+      // })
 
       queryClient.setQueryData(['get-active-account'], mapToConnectedAccount(account))
 

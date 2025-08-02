@@ -2,11 +2,11 @@ import { db } from '@/db'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { createAuthMiddleware } from 'better-auth/api'
-import { PostHog } from 'posthog-node'
+// import { PostHog } from 'posthog-node'
 
-const client = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-  host: 'https://eu.i.posthog.com',
-})
+// const client = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+//   host: 'https://eu.i.posthog.com',
+// })
 
 const database = drizzleAdapter(db, { provider: 'pg' })
 
@@ -20,15 +20,15 @@ export const auth = betterAuth({
     user: {
       create: {
         after: async (user) => {
-          client.capture({
-            distinctId: user.id,
-            event: 'user_signed_up',
-            properties: {
-              email: user.email,
-            },
-          })
+          // client.capture({
+          //   distinctId: user.id,
+          //   event: 'user_signed_up',
+          //   properties: {
+          //     email: user.email,
+          //   },
+          // })
 
-          await client.shutdown()
+          //await client.shutdown()
         },
       },
     },

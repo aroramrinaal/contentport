@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, FileText, FolderOpen, Link, Upload, X } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import posthog from 'posthog-js'
+// import posthog from 'posthog-js'
 import { useCallback, useState } from 'react'
 import toast from 'react-hot-toast'
 
@@ -48,11 +48,11 @@ export default function NewKnowledgePage() {
       return res.json()
     },
     onSuccess: (data) => {
-      posthog.capture('knowledge_imported', {
+      /* posthog.capture('knowledge_imported', {
         source: 'url',
         url: data.url,
         title: data.title,
-      })
+      }) */
 
       queryClient.refetchQueries({ queryKey: ['knowledge-documents'] })
       toast.success(`Successfully imported content from ${data.url}`)
@@ -163,11 +163,11 @@ export default function NewKnowledgePage() {
       return await res.json()
     },
     onSuccess: (data, variables) => {
-      posthog.capture('knowledge_imported', {
+      /* posthog.capture('knowledge_imported', {
         source: 'upload',
         title: variables.title,
         fileKey: variables.fileKey,
-      })
+      }) */
 
       toast.success('Knowledge added!')
       setUploadState(null)

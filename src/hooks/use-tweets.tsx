@@ -12,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { $createParagraphNode, $createTextNode, $getRoot, createEditor } from 'lexical'
 import { nanoid } from 'nanoid'
 import { useParams, usePathname, useSearchParams } from 'next/navigation'
-import posthog from 'posthog-js'
+// import posthog from 'posthog-js'
 import React, {
   createContext,
   PropsWithChildren,
@@ -345,11 +345,11 @@ export function TweetProvider({ children }: PropsWithChildren) {
 
     const content = shadowEditor.read(() => $getRoot().getTextContent())
 
-    posthog.capture('improvement_accepted', {
-      improvementType: acceptedDiff.type,
-      content,
-      diff: acceptedDiff,
-    })
+    // posthog.capture('improvement_accepted', {
+    //   improvementType: acceptedDiff.type,
+    //   content,
+    //   diff: acceptedDiff,
+    // })
   }
 
   const rejectImprovement = (rejectedDiff: DiffWithReplacement) => {
@@ -421,11 +421,11 @@ export function TweetProvider({ children }: PropsWithChildren) {
 
     const content = shadowEditor.read(() => $getRoot().getTextContent())
 
-    posthog.capture('improvement_rejected', {
-      improvementType: rejectedDiff.type,
-      content,
-      diff: rejectedDiff,
-    })
+    // posthog.capture('improvement_rejected', {
+    //   improvementType: rejectedDiff.type,
+    //   content,
+    //   diff: rejectedDiff,
+    // })
   }
 
   /**

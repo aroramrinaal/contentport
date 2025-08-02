@@ -37,7 +37,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import posthog from 'posthog-js'
+// import posthog from 'posthog-js'
 import { PropsWithChildren, useCallback, useRef, useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import { Icons } from '../icons'
@@ -375,13 +375,13 @@ export default function Tweet({ editMode = false, editTweetId }: TweetProps) {
         </div>,
       )
 
-      posthog.capture('tweet_posted', {
-        tweetId: data.tweetId,
-        accountId: data.accountId,
-        accountName: data.accountName,
-        content: variables.content,
-        media: variables.media,
-      })
+      // posthog.capture('tweet_posted', {
+      //   tweetId: data.tweetId,
+      //   accountId: data.accountId,
+      //   accountName: data.accountName,
+      //   content: variables.content,
+      //   media: variables.media,
+      // })
 
       fire({
         particleCount: 100,
@@ -494,14 +494,14 @@ export default function Tweet({ editMode = false, editTweetId }: TweetProps) {
       return (await promise).json()
     },
     onSuccess: (data, variables) => {
-      posthog.capture('tweet_scheduled', {
-        tweetId: data.tweetId,
-        accountId: data.accountId,
-        accountName: data.accountName,
-        content: variables.content,
-        scheduledUnix: variables.scheduledUnix,
-        media: variables.media,
-      })
+        // posthog.capture('tweet_scheduled', {
+        // tweetId: data.tweetId,
+        // accountId: data.accountId,
+        // accountName: data.accountName,
+        // content: variables.content,
+      //   scheduledUnix: variables.scheduledUnix,
+      //   media: variables.media,
+      // })
 
       queryClient.invalidateQueries({ queryKey: ['scheduled-and-published-tweets'] })
 
@@ -628,12 +628,12 @@ export default function Tweet({ editMode = false, editTweetId }: TweetProps) {
           ),
         )
 
-        posthog.capture('tweet_media_uploaded', {
-          mediaType: validation.type,
-          mediaId: twitterResult.media_id,
-          mediaKey: twitterResult.media_key,
-          s3Key: s3Result.fileKey,
-        })
+        // posthog.capture('tweet_media_uploaded', {
+        //   mediaType: validation.type,
+        //   mediaId: twitterResult.media_id,
+        //   mediaKey: twitterResult.media_key,
+        //   s3Key: s3Result.fileKey,
+        // })
 
         // toast.success('Upload done!')
       } catch (error) {

@@ -4,7 +4,7 @@ import { Metadata, Viewport } from 'next'
 import { Instrument_Serif, JetBrains_Mono, Rubik } from 'next/font/google'
 import { Suspense } from 'react'
 import { Toaster } from 'react-hot-toast'
-import { Databuddy, track } from '@databuddy/sdk'
+// import { Databuddy, track } from '@databuddy/sdk'
 
 import './globals.css'
 
@@ -61,12 +61,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       >
         <Analytics />
 
-        <Databuddy
+        {/* <Databuddy
           clientId="-IrMWaFxrpJQiiMMpSc4I"
           disabled={process.env.NODE_ENV === 'development'}
           enableBatching={true}
           trackErrors={true}
-        />
+        /> */}
 
         <Suspense>
           <Toaster position="top-center" />
