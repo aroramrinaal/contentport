@@ -7,7 +7,7 @@ import { BUCKET_NAME, s3Client } from '@/lib/s3'
 import { HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { Receiver } from '@upstash/qstash'
 // import { Ratelimit } from '@upstash/ratelimit' // No longer needed - unlimited access for all
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, isNotNull } from 'drizzle-orm'
 import { HTTPException } from 'hono/http-exception'
 import { SendTweetV2Params, TwitterApi, UserV2 } from 'twitter-api-v2'
 import { z } from 'zod'
@@ -1207,7 +1207,7 @@ export const tweetRouter = j.router({
         eq(tweets.accountId, account.id), 
         eq(tweets.isScheduled, true),
         // Only check tweets that have a qstashId
-        tweets.qstashId.isNotNull()
+        isNotNull(tweets.qstashId)
       ),
       columns: {
         id: true,
