@@ -5,6 +5,7 @@ import { qstash } from '@/lib/qstash'
 import { redis } from '@/lib/redis'
 import { BUCKET_NAME, s3Client } from '@/lib/s3'
 import { HeadObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { Receiver } from '@upstash/qstash'
 // import { Ratelimit } from '@upstash/ratelimit' // No longer needed - unlimited access for all
 import { and, desc, eq, isNotNull } from 'drizzle-orm'
@@ -70,21 +71,13 @@ async function fetchMediaFromS3(media: { s3Key: string; media_id: string }[]) {
           type = 'image'
         }
 
-        // Fetch the actual file data using S3 SDK instead of public URL
+        // Generate presigned URL for secure access
         const getObjectCommand = new GetObjectCommand({
           Bucket: BUCKET_NAME,
           Key: m.s3Key,
         })
         
-        const s3Response = await s3Client.send(getObjectCommand)
-        
-        if (!s3Response.Body) {
-          throw new Error('No file body received from S3')
-        }
-        
-        const uint8Array = await s3Response.Body.transformToByteArray()
-        const blob = new Blob([uint8Array], { type: contentType })
-        const url = URL.createObjectURL(blob)
+        const url = await getSignedUrl(s3Client, getObjectCommand, { expiresIn: 3600 }) // 1 hour expiry
 
         return {
           url,
