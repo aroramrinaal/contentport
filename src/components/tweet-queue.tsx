@@ -21,6 +21,7 @@ import {
 import DuolingoBadge from './ui/duolingo-badge'
 import DuolingoButton from './ui/duolingo-button'
 import { Loader } from './ui/loader'
+import MediaDisplay from './media-display'
 
 export default function TweetQueue() {
   const queryClient = useQueryClient()
@@ -185,9 +186,17 @@ export default function TweetQueue() {
                             {tweet.content || 'No content'}
                           </p>
                           {tweet.media && tweet.media.length > 0 && (
-                            <div className="text-xs text-stone-500">
-                              📎 {tweet.media.length} media file
-                              {tweet.media.length > 1 ? 's' : ''}
+                            <div className="mt-2">
+                              <MediaDisplay
+                                mediaFiles={tweet.media.map((media) => ({
+                                  ...media,
+                                  uploading: false,
+                                  media_id: media.media_id,
+                                  s3Key: media.s3Key,
+                                  type: media.type as 'image' | 'gif' | 'video',
+                                }))}
+                                removeMediaFile={() => {}}
+                              />
                             </div>
                           )}
                         </div>
