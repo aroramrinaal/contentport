@@ -4,7 +4,7 @@ import { client } from '@/lib/client'
 import { cn } from '@/lib/utils'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, isThisWeek, isToday, isTomorrow } from 'date-fns'
-import { Clock, Edit, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Clock, Edit, MoreHorizontal, Trash2, AlertTriangle, Calendar } from 'lucide-react'
 
 import { useTweets } from '@/hooks/use-tweets'
 import { $createParagraphNode, $createTextNode, $getRoot } from 'lexical'
@@ -57,6 +57,39 @@ export default function TweetQueue() {
         <div className="flex flex-col items-center justify-center text-center py-12">
           <Loader variant="classic" />
           <p className="text-sm text-stone-600 mt-4">Loading queue...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Check if there are any scheduled tweets
+  const hasScheduledTweets = data?.results.some(result => {
+    const [, tweets] = Object.entries(result)[0]!
+    return tweets.some(({ tweet }) => tweet !== null)
+  })
+
+  if (!hasScheduledTweets) {
+    return (
+      <div className="space-y-6">
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="size-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-amber-800">No scheduled tweets found</h3>
+              <p className="text-sm text-amber-700 mt-1">
+                If you recently deleted tweets from QStash manually, they may still appear here. 
+                Use the "Sync with QStash" button to clean up orphaned entries.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="text-center py-12">
+          <Calendar className="size-12 text-stone-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-stone-900 mb-2">No scheduled tweets</h3>
+          <p className="text-stone-600 mb-4">
+            Your queue is empty. Schedule your first tweet to get started.
+          </p>
         </div>
       </div>
     )

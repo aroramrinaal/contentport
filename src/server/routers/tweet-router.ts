@@ -1046,18 +1046,70 @@ export const tweetRouter = j.router({
           scheduledUnix: true,
           isPublished: true,
           isQueued: true,
+          qstashId: true,
         },
       })
 
-      const scheduledTweets = await Promise.all(
+      // Verify QStash jobs still exist for tweets that have qstashId
+      const messages = qstash.messages
+      const verifiedTweets = await Promise.all(
         _scheduledTweets.map(async (tweet) => {
-          const enrichedMedia = await fetchMediaFromS3(tweet.media || [])
-          return {
-            ...tweet,
-            media: enrichedMedia,
+          // If tweet has a qstashId, verify the job still exists in QStash
+          if (tweet.qstashId) {
+            try {
+              // Try to get the message from QStash
+              await messages.get(tweet.qstashId)
+              // If successful, the job exists
+              const enrichedMedia = await fetchMediaFromS3(tweet.media || [])
+              return {
+                ...tweet,
+                media: enrichedMedia,
+              }
+            } catch (error) {
+              // Check if it's a 404 error (job not found) vs other errors
+              const isNotFound = error instanceof Error && 
+                (error.message.includes('404') || error.message.includes('not found'))
+              
+              if (isNotFound) {
+                // If the job doesn't exist in QStash, mark it for cleanup
+                console.log(`QStash job ${tweet.qstashId} not found for tweet ${tweet.id}, marking for cleanup`)
+                
+                // Update the database to mark this tweet as not scheduled
+                await db
+                  .update(tweets)
+                  .set({ 
+                    isScheduled: false, 
+                    qstashId: null,
+                    scheduledFor: null,
+                    scheduledUnix: null 
+                  })
+                  .where(eq(tweets.id, tweet.id))
+                
+                // Return null to filter out this tweet
+                return null
+              } else {
+                // For other errors (network, auth, etc.), log but keep the tweet
+                console.warn(`Error checking QStash job ${tweet.qstashId} for tweet ${tweet.id}:`, error)
+                const enrichedMedia = await fetchMediaFromS3(tweet.media || [])
+                return {
+                  ...tweet,
+                  media: enrichedMedia,
+                }
+              }
+            }
+          } else {
+            // For tweets without qstashId (manual scheduling), keep them
+            const enrichedMedia = await fetchMediaFromS3(tweet.media || [])
+            return {
+              ...tweet,
+              media: enrichedMedia,
+            }
           }
-        }),
+        })
       )
+
+      // Filter out null tweets (those that were cleaned up)
+      const scheduledTweets = verifiedTweets.filter((tweet): tweet is NonNullable<typeof tweet> => tweet !== null)
 
       const getSlotTweet = (unix: number) => {
         const slotTweet = scheduledTweets.find((t) => t.scheduledUnix === unix)
@@ -1135,6 +1187,78 @@ export const tweetRouter = j.router({
 
       return c.superjson({ results })
     }),
+
+  cleanup_orphaned_tweets: privateProcedure.post(async ({ c, ctx }) => {
+    const { user } = ctx
+
+    const account = await getAccount({
+      email: user.email,
+    })
+
+    if (!account?.id) {
+      throw new HTTPException(400, {
+        message: 'Please connect your Twitter account',
+      })
+    }
+
+    // Get all scheduled tweets with qstashId
+    const scheduledTweets = await db.query.tweets.findMany({
+      where: and(
+        eq(tweets.accountId, account.id), 
+        eq(tweets.isScheduled, true),
+        // Only check tweets that have a qstashId
+        tweets.qstashId.isNotNull()
+      ),
+      columns: {
+        id: true,
+        qstashId: true,
+      },
+    })
+
+    const messages = qstash.messages
+    let cleanedCount = 0
+
+    // Check each tweet's QStash job
+    for (const tweet of scheduledTweets) {
+      if (tweet.qstashId) {
+        try {
+          // Try to get the message from QStash
+          await messages.get(tweet.qstashId)
+          // If successful, the job exists - do nothing
+        } catch (error) {
+          // Check if it's a 404 error (job not found) vs other errors
+          const isNotFound = error instanceof Error && 
+            (error.message.includes('404') || error.message.includes('not found'))
+          
+          if (isNotFound) {
+            // If the job doesn't exist in QStash, clean it up
+            console.log(`Cleaning up orphaned tweet ${tweet.id} with missing QStash job ${tweet.qstashId}`)
+            
+            await db
+              .update(tweets)
+              .set({ 
+                isScheduled: false, 
+                qstashId: null,
+                scheduledFor: null,
+                scheduledUnix: null 
+              })
+              .where(eq(tweets.id, tweet.id))
+            
+            cleanedCount++
+          } else {
+            // For other errors (network, auth, etc.), log but don't clean up
+            console.warn(`Error checking QStash job ${tweet.qstashId} for tweet ${tweet.id}:`, error)
+          }
+        }
+      }
+    }
+
+    return c.json({ 
+      success: true, 
+      cleanedCount,
+      message: `Cleaned up ${cleanedCount} orphaned scheduled tweets`
+    })
+  }),
 
   getHandles: privateProcedure
     .input(
